@@ -1,4 +1,5 @@
 import express from 'express';
+import { errorHandler, notFoundHandler } from './middleware/errors.js';
 
 export function createApp() {
   const app = express();
@@ -9,5 +10,7 @@ export function createApp() {
     res.json({ status: 'ok' });
   });
 
+  app.use('/api', notFoundHandler);
+  app.use(errorHandler);
   return app;
 }
