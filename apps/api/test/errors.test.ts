@@ -1,11 +1,20 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { createApp } from '../src/app.js';
+import type { Database } from '../src/db/connection.js';
 import { HttpError } from '../src/lib/errors.js';
 import { validate } from '../src/lib/validate.js';
+import { buildApp, buildContext } from './app.js';
+import { createTestDatabase } from './db.js';
 
 describe('error handling', () => {
+  let db: Database;
+  const createApp = () => buildApp(buildContext(db));
+  beforeAll(async () => {
+    db = await createTestDatabase();
+  });
+  afterAll(() => db.destroy());
+
   it('returns a json 404 for unknown api routes', async () => {
     const res = await request(createApp()).get('/api/nope');
     expect(res.status).toBe(404);
