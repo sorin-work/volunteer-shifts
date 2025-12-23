@@ -30,17 +30,12 @@ export function authRoutes(ctx: AppContext): Router {
   const router = Router();
 
   async function startSession(res: Response, userId: number) {
-    const { token, expiresAt } = await createSession(
-      ctx.db,
-      userId,
-      ctx.config.SESSION_TTL_HOURS,
-      ctx.now(),
-    );
+    const { token } = await createSession(ctx.db, userId, ctx.config.SESSION_TTL_HOURS, ctx.now());
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: 'lax',
       secure: ctx.config.NODE_ENV === 'production',
-      expires: expiresAt,
+      maxAge: ctx.config.SESSION_TTL_HOURS * 3_600_000,
       path: '/',
     });
   }
