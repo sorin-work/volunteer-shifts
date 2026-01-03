@@ -26,11 +26,28 @@ export interface SessionsTable {
   created_at: Timestamp;
 }
 
+export type EventStatus = 'draft' | 'published' | 'cancelled';
+
+export interface EventsTable {
+  id: Generated<number>;
+  name: string;
+  description: ColumnType<string, string | undefined, string>;
+  location: ColumnType<string, string | undefined, string>;
+  timezone: ColumnType<string, string | undefined, string>;
+  status: ColumnType<EventStatus, EventStatus | undefined, EventStatus>;
+  created_by: number | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
 export interface DB {
   users: UsersTable;
   sessions: SessionsTable;
+  events: EventsTable;
 }
 
 export type User = Selectable<UsersTable>;
 export type NewUser = Insertable<UsersTable>;
 export type UserUpdate = Updateable<UsersTable>;
+
+export type Event = Selectable<EventsTable>;
