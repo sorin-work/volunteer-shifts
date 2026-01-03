@@ -2,14 +2,16 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/connection.js';
 import { migrateToLatest } from './db/migrate.js';
+import { createLogger } from './lib/logger.js';
 
 const config = loadConfig();
+const logger = createLogger(config);
 const db = createDatabase(config.DATABASE_URL);
 await migrateToLatest(db);
 
-const app = createApp({ db, config, now: () => new Date() });
+const app = createApp({ db, config, logger, now: () => new Date() });
 const server = app.listen(config.PORT, () => {
-  console.log(`api listening on http://localhost:${config.PORT}`);
+  logger.info(`api listening on http://localhost:${config.PORT}`);
 });
 
 async function shutdown() {

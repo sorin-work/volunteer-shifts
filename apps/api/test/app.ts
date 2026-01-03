@@ -4,6 +4,7 @@ import { loadConfig } from '../src/config.js';
 import type { AppContext } from '../src/context.js';
 import type { Database } from '../src/db/connection.js';
 import type { NewUser } from '../src/db/types.js';
+import { createLogger } from '../src/lib/logger.js';
 import { hashPassword } from '../src/modules/auth/passwords.js';
 
 export const TEST_PASSWORD = 'password123';
@@ -19,9 +20,11 @@ export interface TestContext extends AppContext {
 
 export function buildContext(db: Database): TestContext {
   let now = new Date('2026-03-02T09:00:00Z');
+  const config = testConfig();
   return {
     db,
-    config: testConfig(),
+    config,
+    logger: createLogger(config),
     now: () => now,
     setNow: (d) => {
       now = new Date(d);
