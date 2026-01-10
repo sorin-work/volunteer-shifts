@@ -65,5 +65,30 @@ export function eventRoutes(ctx: AppContext): Router {
     res.json({ event: toEventDto(updated) });
   });
 
+  router.post('/:id/publish', requireCoordinator, async (req, res) => {
+    const event = await findVisibleEvent(req);
+    if (event.status === 'cancelled') {
+      throw conflict('event_cancelled', 'A cancelled event cannot be published again.');
+    }
+    const updated = await ctx.db
+      .updateTable('events')
+      .set({ status: 'published', updated_at: ctx.now() })
+      .where('id', '=', event.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    res.json({ event: toEventDto(updated) });
+  });
+
+  router.post('/:id/cancel', requireCoordinator, async (req, res) => {
+    const event = await findVisibleEvent(req);
+    const updated = await ctx.db
+      .updateTable('events')
+      .set({ status: 'cancelled', updated_at: ctx.now() })
+      .where('id', '=', event.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    res.json({ event: toEventDto(updated) });
+  });
+
   return router;
 }
