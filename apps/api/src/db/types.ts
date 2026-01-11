@@ -40,10 +40,32 @@ export interface EventsTable {
   updated_at: Timestamp;
 }
 
+export interface RolesTable {
+  id: Generated<number>;
+  event_id: number;
+  name: string;
+  description: ColumnType<string, string | undefined, string>;
+  min_age: number | null;
+  created_at: Timestamp;
+}
+
+export interface ShiftsTable {
+  id: Generated<number>;
+  event_id: number;
+  role_id: number;
+  starts_at: Timestamp;
+  ends_at: Timestamp;
+  capacity: number;
+  notes: ColumnType<string, string | undefined, string>;
+  created_at: Timestamp;
+}
+
 export interface DB {
   users: UsersTable;
   sessions: SessionsTable;
   events: EventsTable;
+  roles: RolesTable;
+  shifts: ShiftsTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -51,3 +73,5 @@ export type NewUser = Insertable<UsersTable>;
 export type UserUpdate = Updateable<UsersTable>;
 
 export type Event = Selectable<EventsTable>;
+export type Role = Selectable<RolesTable>;
+export type Shift = Selectable<ShiftsTable>;
