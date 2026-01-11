@@ -6,6 +6,7 @@ import { loadSession } from './middleware/auth.js';
 import { createErrorHandler, notFoundHandler } from './middleware/errors.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { eventRoutes } from './modules/events/routes.js';
+import { roleRoutes } from './modules/roles/routes.js';
 
 export function createApp(ctx: AppContext) {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp(ctx: AppContext) {
 
   app.use('/api/auth', authRoutes(ctx));
   app.use('/api/events', eventRoutes(ctx));
+  app.use('/api', roleRoutes(ctx));
 
   app.use('/api', notFoundHandler);
   app.use(createErrorHandler(ctx.logger));
