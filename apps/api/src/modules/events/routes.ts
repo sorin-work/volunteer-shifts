@@ -4,6 +4,8 @@ import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
 import { currentUser, requireAuth, requireCoordinator } from '../../middleware/auth.js';
+import { toRoleDto } from '../roles/dto.js';
+import { toShiftDto } from '../shifts/dto.js';
 import { toEventDto } from './dto.js';
 import { createEventSchema, updateEventSchema } from './schemas.js';
 
@@ -47,7 +49,26 @@ export function eventRoutes(ctx: AppContext): Router {
 
   router.get('/:id', async (req, res) => {
     const event = await findVisibleEvent(req);
-    res.json({ event: toEventDto(event) });
+    const [roles, shifts] = await Promise.all([
+      ctx.db
+        .selectFrom('roles')
+        .selectAll()
+        .where('event_id', '=', event.id)
+        .orderBy('name')
+        .execute(),
+      ctx.db
+        .selectFrom('shifts')
+        .selectAll()
+        .where('event_id', '=', event.id)
+        .orderBy('starts_at')
+        .orderBy('id')
+        .execute(),
+    ]);
+    res.json({
+      event: toEventDto(event),
+      roles: roles.map(toRoleDto),
+      shifts: shifts.map((s) => toShiftDto(s, event.timezone)),
+    });
   });
 
   router.patch('/:id', requireCoordinator, async (req, res) => {
