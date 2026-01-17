@@ -60,12 +60,24 @@ export interface ShiftsTable {
   created_at: Timestamp;
 }
 
+export type SignupStatus = 'confirmed' | 'waitlisted' | 'cancelled';
+
+export interface SignupsTable {
+  id: Generated<number>;
+  shift_id: number;
+  user_id: number;
+  status: SignupStatus;
+  created_at: Timestamp;
+  cancelled_at: Timestamp | null;
+}
+
 export interface DB {
   users: UsersTable;
   sessions: SessionsTable;
   events: EventsTable;
   roles: RolesTable;
   shifts: ShiftsTable;
+  signups: SignupsTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -75,3 +87,4 @@ export type UserUpdate = Updateable<UsersTable>;
 export type Event = Selectable<EventsTable>;
 export type Role = Selectable<RolesTable>;
 export type Shift = Selectable<ShiftsTable>;
+export type Signup = Selectable<SignupsTable>;
