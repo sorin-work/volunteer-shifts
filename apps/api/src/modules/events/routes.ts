@@ -64,10 +64,28 @@ export function eventRoutes(ctx: AppContext): Router {
         .orderBy('id')
         .execute(),
     ]);
+    const shiftIds = shifts.map((s) => s.id);
+    const signups = shiftIds.length
+      ? await ctx.db
+          .selectFrom('signups')
+          .select(['id', 'shift_id', 'user_id', 'status'])
+          .where('shift_id', 'in', shiftIds)
+          .where('status', '<>', 'cancelled')
+          .execute()
+      : [];
+    const userId = currentUser(req).id;
     res.json({
       event: toEventDto(event),
       roles: roles.map(toRoleDto),
-      shifts: shifts.map((s) => toShiftDto(s, event.timezone)),
+      shifts: shifts.map((s) => {
+        const forShift = signups.filter((x) => x.shift_id === s.id);
+        const mine = forShift.find((x) => x.user_id === userId);
+        return {
+          ...toShiftDto(s, event.timezone),
+          confirmedCount: forShift.filter((x) => x.status === 'confirmed').length,
+          mySignup: mine ? { id: mine.id, status: mine.status } : null,
+        };
+      }),
     });
   });
 
