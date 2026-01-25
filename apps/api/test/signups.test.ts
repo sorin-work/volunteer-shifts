@@ -71,6 +71,35 @@ describe('signups', () => {
     expect((await volunteer.post(`/api/shifts/${shift.id}/signups`)).status).toBe(409);
   });
 
+  describe('schedule conflicts', () => {
+    it('rejects a shift that overlaps one you already have', async () => {
+      const morning = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+      const brunch = await shiftAt('2026-03-07T08:00:00Z', '2026-03-07T10:00:00Z');
+      await volunteer.post(`/api/shifts/${morning.id}/signups`).expect(201);
+      const res = await volunteer.post(`/api/shifts/${brunch.id}/signups`);
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('schedule_conflict');
+      expect(res.body.error.details.shifts).toEqual([
+        expect.objectContaining({ shiftId: morning.id, eventName: 'Food bank Saturday' }),
+      ]);
+    });
+
+    it('allows back-to-back shifts', async () => {
+      const first = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+      const second = await shiftAt('2026-03-07T12:00:00Z', '2026-03-07T15:00:00Z');
+      await volunteer.post(`/api/shifts/${first.id}/signups`).expect(201);
+      expect((await volunteer.post(`/api/shifts/${second.id}/signups`)).status).toBe(201);
+    });
+
+    it('ignores cancelled signups', async () => {
+      const first = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+      const clash = await shiftAt('2026-03-07T08:00:00Z', '2026-03-07T11:00:00Z');
+      const { body } = await volunteer.post(`/api/shifts/${clash.id}/signups`).expect(201);
+      await volunteer.delete(`/api/signups/${body.signup.id}`).expect(200);
+      expect((await volunteer.post(`/api/shifts/${first.id}/signups`)).status).toBe(201);
+    });
+  });
+
   it('lists upcoming and past signups separately', async () => {
     const past = await shiftAt('2026-03-01T09:00:00Z', '2026-03-01T12:00:00Z');
     const later = await shiftAt('2026-03-09T09:00:00Z', '2026-03-09T12:00:00Z');

@@ -31,6 +31,30 @@ export async function countConfirmed(ctx: AppContext, shiftId: number): Promise<
   return Number(count);
 }
 
+/** The user's active signups on other shifts that clash with the given time range. */
+export async function findConflicts(
+  ctx: AppContext,
+  userId: number,
+  range: { startsAt: Date; endsAt: Date; excludeShiftId?: number },
+) {
+  let query = ctx.db
+    .selectFrom('signups')
+    .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+    .innerJoin('events', 'events.id', 'shifts.event_id')
+    .select([
+      'shifts.id as shift_id',
+      'shifts.starts_at',
+      'shifts.ends_at',
+      'events.name as event_name',
+    ])
+    .where('signups.user_id', '=', userId)
+    .where('signups.status', 'in', ['confirmed', 'waitlisted'])
+    .where('shifts.starts_at', '>=', range.startsAt)
+    .where('shifts.starts_at', '<', range.endsAt);
+  if (range.excludeShiftId) query = query.where('shifts.id', '<>', range.excludeShiftId);
+  return query.orderBy('shifts.starts_at').execute();
+}
+
 /** Signs the user up for a shift, checking everything a coordinator would. */
 export async function signUp(ctx: AppContext, user: User, shiftId: number) {
   const shift = await getShiftWithEvent(ctx, shiftId);
@@ -50,6 +74,22 @@ export async function signUp(ctx: AppContext, user: User, shiftId: number) {
     .where('status', '<>', 'cancelled')
     .executeTakeFirst();
   if (existing) throw conflict('already_signed_up', 'You are already signed up for this shift.');
+
+  const conflicts = await findConflicts(ctx, user.id, {
+    startsAt: shift.starts_at,
+    endsAt: shift.ends_at,
+    excludeShiftId: shift.id,
+  });
+  if (conflicts.length) {
+    throw conflict('schedule_conflict', 'You already have a shift at this time.', {
+      shifts: conflicts.map((c) => ({
+        shiftId: c.shift_id,
+        eventName: c.event_name,
+        startsAt: c.starts_at.toISOString(),
+        endsAt: c.ends_at.toISOString(),
+      })),
+    });
+  }
 
   const confirmed = await countConfirmed(ctx, shift.id);
   if (confirmed >= shift.capacity) {
