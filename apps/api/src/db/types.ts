@@ -71,6 +71,22 @@ export interface SignupsTable {
   cancelled_at: Timestamp | null;
 }
 
+export interface SkillsTable {
+  id: Generated<number>;
+  name: string;
+  created_at: Timestamp;
+}
+
+export interface UserSkillsTable {
+  user_id: number;
+  skill_id: number;
+}
+
+export interface RoleSkillsTable {
+  role_id: number;
+  skill_id: number;
+}
+
 export interface DB {
   users: UsersTable;
   sessions: SessionsTable;
@@ -78,6 +94,9 @@ export interface DB {
   roles: RolesTable;
   shifts: ShiftsTable;
   signups: SignupsTable;
+  skills: SkillsTable;
+  user_skills: UserSkillsTable;
+  role_skills: RoleSkillsTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -88,3 +107,4 @@ export type Event = Selectable<EventsTable>;
 export type Role = Selectable<RolesTable>;
 export type Shift = Selectable<ShiftsTable>;
 export type Signup = Selectable<SignupsTable>;
+export type Skill = Selectable<SkillsTable>;
