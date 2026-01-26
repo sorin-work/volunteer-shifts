@@ -5,6 +5,7 @@ import { conflict, unauthorized } from '../../lib/errors.js';
 import { toPublicUser } from '../../lib/users.js';
 import { validate } from '../../lib/validate.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
+import { skillsForUser } from '../volunteers/routes.js';
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from './passwords.js';
 import { createSession, deleteSession, SESSION_COOKIE } from './sessions.js';
 
@@ -85,8 +86,9 @@ export function authRoutes(ctx: AppContext): Router {
     res.status(204).end();
   });
 
-  router.get('/me', requireAuth, (req, res) => {
-    res.json({ user: toPublicUser(currentUser(req)) });
+  router.get('/me', requireAuth, async (req, res) => {
+    const user = currentUser(req);
+    res.json({ user: { ...toPublicUser(user), skills: await skillsForUser(ctx, user.id) } });
   });
 
   return router;

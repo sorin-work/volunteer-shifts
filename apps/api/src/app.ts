@@ -9,6 +9,8 @@ import { eventRoutes } from './modules/events/routes.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { shiftRoutes } from './modules/shifts/routes.js';
 import { signupRoutes } from './modules/signups/routes.js';
+import { skillRoutes } from './modules/skills/routes.js';
+import { volunteerRoutes } from './modules/volunteers/routes.js';
 
 export function createApp(ctx: AppContext) {
   const app = express();
@@ -30,6 +32,8 @@ export function createApp(ctx: AppContext) {
 
   app.use('/api/auth', authRoutes(ctx));
   app.use('/api/events', eventRoutes(ctx));
+  app.use('/api/skills', skillRoutes(ctx));
+  app.use('/api/volunteers', volunteerRoutes(ctx));
   app.use('/api', roleRoutes(ctx));
   app.use('/api', shiftRoutes(ctx));
   app.use('/api', signupRoutes(ctx));
