@@ -1,6 +1,7 @@
 import type { AppContext } from '../../context.js';
 import type { User } from '../../db/types.js';
 import { conflict, notFound } from '../../lib/errors.js';
+import { assertEligible } from './eligibility.js';
 
 export async function getShiftWithEvent(ctx: AppContext, shiftId: number) {
   const row = await ctx.db
@@ -65,6 +66,8 @@ export async function signUp(ctx: AppContext, user: User, shiftId: number) {
   if (shift.starts_at <= ctx.now()) {
     throw conflict('shift_started', 'This shift has already started.');
   }
+
+  await assertEligible(ctx, user, shift);
 
   const existing = await ctx.db
     .selectFrom('signups')
