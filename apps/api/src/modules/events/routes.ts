@@ -4,7 +4,7 @@ import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
 import { currentUser, requireAuth, requireCoordinator } from '../../middleware/auth.js';
-import { toRoleDto } from '../roles/dto.js';
+import { requiredSkillsByRole, toRoleDto } from '../roles/dto.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { toEventDto } from './dto.js';
 import { createEventSchema, updateEventSchema } from './schemas.js';
@@ -73,10 +73,14 @@ export function eventRoutes(ctx: AppContext): Router {
           .where('status', '<>', 'cancelled')
           .execute()
       : [];
+    const skills = await requiredSkillsByRole(
+      ctx.db,
+      roles.map((r) => r.id),
+    );
     const userId = currentUser(req).id;
     res.json({
       event: toEventDto(event),
-      roles: roles.map(toRoleDto),
+      roles: roles.map((r) => toRoleDto(r, skills.get(r.id))),
       shifts: shifts.map((s) => {
         const forShift = signups.filter((x) => x.shift_id === s.id);
         const mine = forShift.find((x) => x.user_id === userId);

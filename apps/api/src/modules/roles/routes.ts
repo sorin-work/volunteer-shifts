@@ -1,17 +1,18 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
-import { conflict, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
 import { requireCoordinator } from '../../middleware/auth.js';
 import { getEditableEvent } from '../events/queries.js';
-import { toRoleDto } from './dto.js';
+import { requiredSkillsByRole, toRoleDto } from './dto.js';
 
 const roleSchema = z.object({
   name: z.string().trim().min(1, 'Name is required.').max(80),
   description: z.string().trim().max(1000).default(''),
   minAge: z.number().int().min(0).max(120).nullable().default(null),
+  skillIds: z.array(z.number().int().positive()).max(20).default([]),
 });
 
 export function roleRoutes(ctx: AppContext): Router {
@@ -27,6 +28,30 @@ export function roleRoutes(ctx: AppContext): Router {
     if (await query.executeTakeFirst()) {
       throw conflict('role_exists', `This event already has a role called "${name}".`);
     }
+  }
+
+  async function setRequiredSkills(roleId: number, skillIds: number[]) {
+    const unique = [...new Set(skillIds)];
+    if (unique.length) {
+      const found = await ctx.db
+        .selectFrom('skills')
+        .select('id')
+        .where('id', 'in', unique)
+        .execute();
+      if (found.length !== unique.length) throw badRequest('Unknown skill in the list.');
+    }
+    await ctx.db.deleteFrom('role_skills').where('role_id', '=', roleId).execute();
+    if (unique.length) {
+      await ctx.db
+        .insertInto('role_skills')
+        .values(unique.map((skill_id) => ({ role_id: roleId, skill_id })))
+        .execute();
+    }
+  }
+
+  async function roleResponse(role: Awaited<ReturnType<typeof getRole>>) {
+    const skills = await requiredSkillsByRole(ctx.db, [role.id]);
+    return { role: toRoleDto(role, skills.get(role.id)) };
   }
 
   async function getRole(id: number) {
@@ -53,13 +78,17 @@ export function roleRoutes(ctx: AppContext): Router {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    res.status(201).json({ role: toRoleDto(role) });
+    await setRequiredSkills(role.id, input.skillIds);
+    res.status(201).json(await roleResponse(role));
   });
 
   router.patch('/roles/:id', requireCoordinator, async (req, res) => {
     const role = await getRole(idParam(req.params.id, 'Role'));
     await getEditableEvent(ctx.db, role.event_id);
-    const input = validate(roleSchema.partial(), req.body);
+    const input = validate(
+      roleSchema.partial().extend({ skillIds: roleSchema.shape.skillIds.unwrap().optional() }),
+      req.body,
+    );
     if (input.name) await assertNameFree(role.event_id, input.name, role.id);
     const updated = await ctx.db
       .updateTable('roles')
@@ -71,7 +100,8 @@ export function roleRoutes(ctx: AppContext): Router {
       .where('id', '=', role.id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    res.json({ role: toRoleDto(updated) });
+    if (input.skillIds) await setRequiredSkills(role.id, input.skillIds);
+    res.json(await roleResponse(updated));
   });
 
   router.delete('/roles/:id', requireCoordinator, async (req, res) => {
