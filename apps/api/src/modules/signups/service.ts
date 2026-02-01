@@ -122,3 +122,38 @@ export async function waitlistPosition(
     .executeTakeFirstOrThrow();
   return Number(ahead) + 1;
 }
+
+/**
+ * Fills open spots on a shift from its waitlist, first come first served.
+ * Returns the signups that were promoted.
+ */
+export async function promoteFromWaitlist(ctx: AppContext, shiftId: number) {
+  const shift = await ctx.db
+    .selectFrom('shifts')
+    .select(['id', 'capacity'])
+    .where('id', '=', shiftId)
+    .executeTakeFirstOrThrow();
+  const open = shift.capacity - (await countConfirmed(ctx, shiftId));
+  if (open <= 0) return [];
+
+  const next = await ctx.db
+    .selectFrom('signups')
+    .select('id')
+    .where('shift_id', '=', shiftId)
+    .where('status', '=', 'waitlisted')
+    .orderBy('created_at', 'desc')
+    .limit(open)
+    .execute();
+  if (!next.length) return [];
+
+  return ctx.db
+    .updateTable('signups')
+    .set({ status: 'confirmed' })
+    .where(
+      'id',
+      'in',
+      next.map((n) => n.id),
+    )
+    .returningAll()
+    .execute();
+}
