@@ -94,15 +94,31 @@ export async function signUp(ctx: AppContext, user: User, shiftId: number) {
     });
   }
 
+  // A full shift doesn't turn people away: they join the waitlist and move up
+  // when someone cancels.
   const confirmed = await countConfirmed(ctx, shift.id);
-  if (confirmed >= shift.capacity) {
-    throw conflict('shift_full', 'This shift is full.');
-  }
+  const status = confirmed >= shift.capacity ? 'waitlisted' : 'confirmed';
 
   const signup = await ctx.db
     .insertInto('signups')
-    .values({ shift_id: shift.id, user_id: user.id, status: 'confirmed' })
+    .values({ shift_id: shift.id, user_id: user.id, status })
     .returningAll()
     .executeTakeFirstOrThrow();
   return { signup, shift };
+}
+
+/** 1-based position on the waitlist, or null when the signup isn't waitlisted. */
+export async function waitlistPosition(
+  ctx: AppContext,
+  signup: { id: number; shift_id: number; status: string; created_at: Date },
+): Promise<number | null> {
+  if (signup.status !== 'waitlisted') return null;
+  const { ahead } = await ctx.db
+    .selectFrom('signups')
+    .select((eb) => eb.fn.countAll<number>().as('ahead'))
+    .where('shift_id', '=', signup.shift_id)
+    .where('status', '=', 'waitlisted')
+    .where('created_at', '<', signup.created_at)
+    .executeTakeFirstOrThrow();
+  return Number(ahead) + 1;
 }

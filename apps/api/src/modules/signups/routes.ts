@@ -5,7 +5,7 @@ import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
-import { signUp } from './service.js';
+import { signUp, waitlistPosition } from './service.js';
 
 export function toSignupDto(signup: Signup) {
   return {
@@ -23,7 +23,9 @@ export function signupRoutes(ctx: AppContext): Router {
 
   router.post('/shifts/:id/signups', requireAuth, async (req, res) => {
     const { signup } = await signUp(ctx, currentUser(req), idParam(req.params.id, 'Shift'));
-    res.status(201).json({ signup: toSignupDto(signup) });
+    res.status(201).json({
+      signup: { ...toSignupDto(signup), waitlistPosition: await waitlistPosition(ctx, signup) },
+    });
   });
 
   router.get('/me/signups', requireAuth, async (req, res) => {

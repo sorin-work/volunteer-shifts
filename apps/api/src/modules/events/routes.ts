@@ -87,6 +87,7 @@ export function eventRoutes(ctx: AppContext): Router {
         return {
           ...toShiftDto(s, event.timezone),
           confirmedCount: forShift.filter((x) => x.status === 'confirmed').length,
+          waitlistCount: forShift.filter((x) => x.status === 'waitlisted').length,
           mySignup: mine ? { id: mine.id, status: mine.status } : null,
         };
       }),

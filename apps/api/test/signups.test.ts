@@ -45,15 +45,15 @@ describe('signups', () => {
     expect(res.body.error.code).toBe('already_signed_up');
   });
 
-  it('rejects full shifts', async () => {
+  it('puts people on the waitlist when a shift is full', async () => {
     const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z', 1);
     await createUser(db, { email: 'first@example.org' });
     await (await loginAs(app, 'first@example.org'))
       .post(`/api/shifts/${shift.id}/signups`)
       .expect(201);
     const res = await volunteer.post(`/api/shifts/${shift.id}/signups`);
-    expect(res.status).toBe(409);
-    expect(res.body.error.code).toBe('shift_full');
+    expect(res.status).toBe(201);
+    expect(res.body.signup).toMatchObject({ status: 'waitlisted', waitlistPosition: 1 });
   });
 
   it('rejects shifts that already started', async () => {
