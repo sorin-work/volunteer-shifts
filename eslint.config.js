@@ -24,5 +24,9 @@ export default tseslint.config(
   {
     files: ['**/*.svelte', '**/*.svelte.ts'],
     languageOptions: { parserOptions: { parser: tseslint.parser } },
+    rules: {
+      // Plain hrefs are fine for an app served from the site root.
+      'svelte/no-navigation-without-resolve': 'off',
+    },
   },
 );
