@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../src/db/connection.js';
 import { buildApp, buildContext, createUser, loginAs } from './app.js';
 import { createTestDatabase, resetDatabase } from './db.js';
+import { createRole, createShift } from './fixtures.js';
 
 describe('events routes', () => {
   let db: Database;
@@ -86,6 +87,48 @@ describe('events routes', () => {
       409,
     );
     expect((await coordinator.post(`/api/events/${event.id}/publish`)).status).toBe(409);
+  });
+
+  it('lists upcoming events by first shift with dates and spots', async () => {
+    const later = await createEvent({ name: 'Later' });
+    const sooner = await createEvent({ name: 'Sooner' });
+    const past = await createEvent({ name: 'Past' });
+    for (const [event, start, capacity] of [
+      [later, '2026-04-01T09:00:00Z', 4],
+      [later, '2026-04-02T09:00:00Z', 6],
+      [sooner, '2026-03-10T09:00:00Z', 3],
+      [past, '2026-02-01T09:00:00Z', 3],
+    ] as const) {
+      const role = await createRole(db, event.id, { name: `Role ${start}` });
+      const end = start.replace('09:00', '12:00');
+      await createShift(db, {
+        eventId: event.id,
+        roleId: role.id,
+        startsAt: start,
+        endsAt: end,
+        capacity,
+      });
+    }
+    const upcoming = await coordinator.get('/api/events');
+    expect(upcoming.body.events.map((e: { name: string }) => e.name)).toEqual(['Sooner', 'Later']);
+    expect(upcoming.body.events[1]).toMatchObject({
+      firstShiftAt: '2026-04-01T09:00:00.000Z',
+      lastShiftEndsAt: '2026-04-02T12:00:00.000Z',
+      shiftCount: 2,
+      totalSpots: 10,
+    });
+    const pastList = await coordinator.get('/api/events?when=past');
+    expect(pastList.body.events.map((e: { name: string }) => e.name)).toEqual(['Past']);
+  });
+
+  it('keeps new events without shifts in the upcoming list', async () => {
+    await createEvent({ name: 'Brand new' });
+    const res = await coordinator.get('/api/events');
+    expect(res.body.events[0]).toMatchObject({
+      name: 'Brand new',
+      shiftCount: 0,
+      firstShiftAt: null,
+    });
   });
 
   it('returns 404 for unknown or malformed ids', async () => {

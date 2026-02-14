@@ -29,12 +29,48 @@ export function eventRoutes(ctx: AppContext): Router {
   }
 
   router.get('/', async (req, res) => {
-    let query = ctx.db.selectFrom('events').selectAll().orderBy('created_at', 'desc');
+    const when = ['upcoming', 'past', 'all'].includes(String(req.query.when))
+      ? String(req.query.when)
+      : 'upcoming';
+    let query = ctx.db
+      .selectFrom('events')
+      .leftJoin('shifts', 'shifts.event_id', 'events.id')
+      .selectAll('events')
+      .select((eb) => [
+        eb.fn.min('shifts.starts_at').as('first_starts_at'),
+        eb.fn.max('shifts.ends_at').as('last_ends_at'),
+        eb.fn.count<number>('shifts.id').as('shift_count'),
+        eb.fn.coalesce(eb.fn.sum<number>('shifts.capacity'), eb.lit(0)).as('total_spots'),
+      ])
+      .groupBy('events.id');
     if (currentUser(req).role !== 'coordinator') {
-      query = query.where('status', '=', 'published');
+      query = query.where('events.status', '=', 'published');
     }
-    const events = await query.execute();
-    res.json({ events: events.map(toEventDto) });
+    const now = ctx.now();
+    if (when === 'upcoming') {
+      // Events still to come, plus drafts that have no shifts yet.
+      query = query.having((eb) =>
+        eb.or([eb(eb.fn.max('shifts.ends_at'), '>', now), eb(eb.fn.count('shifts.id'), '=', 0)]),
+      );
+    } else if (when === 'past') {
+      query = query.having((eb) => eb(eb.fn.max('shifts.ends_at'), '<=', now));
+    }
+    const rows = await query
+      .orderBy(
+        (eb) => eb.fn.min('shifts.starts_at'),
+        (ob) => ob.asc().nullsLast(),
+      )
+      .orderBy('events.id')
+      .execute();
+    res.json({
+      events: rows.map((r) => ({
+        ...toEventDto(r),
+        firstShiftAt: r.first_starts_at ? new Date(r.first_starts_at).toISOString() : null,
+        lastShiftEndsAt: r.last_ends_at ? new Date(r.last_ends_at).toISOString() : null,
+        shiftCount: Number(r.shift_count),
+        totalSpots: Number(r.total_spots),
+      })),
+    });
   });
 
   router.post('/', requireCoordinator, async (req, res) => {
