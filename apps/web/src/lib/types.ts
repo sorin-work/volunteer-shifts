@@ -81,3 +81,10 @@ export interface MySignup extends Signup {
   event: Pick<VolunteerEvent, 'id' | 'name' | 'location' | 'timezone' | 'status'>;
   role: { id: number; name: string };
 }
+
+export interface EventSummary extends VolunteerEvent {
+  firstShiftAt: string | null;
+  lastShiftEndsAt: string | null;
+  shiftCount: number;
+  totalSpots: number;
+}
