@@ -1,2 +1,34 @@
-<h1>Volunteer Shifts</h1>
-<p>Sign up for shifts at food banks, festivals and community events.</p>
+<script lang="ts">
+  import { api } from '$lib/api';
+  import SignupList from '$lib/components/SignupList.svelte';
+  import { session } from '$lib/session.svelte';
+  import type { MySignup } from '$lib/types';
+
+  let next: MySignup[] = $state([]);
+  let loaded = $state(false);
+
+  $effect(() => {
+    api
+      .get<{ signups: MySignup[] }>('/me/signups')
+      .then((res) => (next = res.signups.slice(0, 3)))
+      .finally(() => (loaded = true));
+  });
+</script>
+
+<svelte:head><title>Volunteer Shifts</title></svelte:head>
+
+<h1>Hi {session.user?.name.split(' ')[0]}</h1>
+
+<section class="stack">
+  <h2>Your next shifts</h2>
+  {#if !loaded}
+    <p class="muted">Loading…</p>
+  {:else if next.length === 0}
+    <div class="card">
+      <p>Nothing booked yet. <a href="/events">Browse upcoming events</a> and pick a shift.</p>
+    </div>
+  {:else}
+    <SignupList signups={next} />
+    <p><a href="/my/shifts">All my shifts →</a></p>
+  {/if}
+</section>
