@@ -3,13 +3,56 @@
   import { api, ApiError } from '$lib/api';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import { formatDate, formatTimeRange, groupByDate, spotsLabel } from '$lib/format';
-  import type { EventDetails, EventShift } from '$lib/types';
+  import { describeSignupError } from '$lib/signup-errors';
+  import type { EventDetails, EventShift, Signup } from '$lib/types';
 
   let details = $state<EventDetails | null>(null);
   let error = $state('');
 
   const roleById = $derived(new Map((details?.roles ?? []).map((r) => [r.id, r])));
   const days = $derived(groupByDate<EventShift>(details?.shifts ?? []));
+
+  let busy = $state<number | null>(null);
+  let shiftErrors: Record<number, string> = $state({});
+  let notice = $state('');
+
+  async function signUp(shift: EventShift) {
+    busy = shift.id;
+    shiftErrors = {};
+    notice = '';
+    try {
+      const { signup } = await api.post<{ signup: Signup }>(`/shifts/${shift.id}/signups`);
+      notice =
+        signup.status === 'waitlisted'
+          ? `You're number ${signup.waitlistPosition} on the waitlist. We'll email you if a spot opens.`
+          : "You're signed up. See you there!";
+      await load();
+    } catch (err) {
+      shiftErrors = { [shift.id]: describeSignupError(err) };
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function cancel(shift: EventShift) {
+    if (!shift.mySignup) return;
+    const what =
+      shift.mySignup.status === 'waitlisted' ? 'Leave the waitlist' : 'Cancel this shift';
+    if (!confirm(`${what}?`)) return;
+    busy = shift.id;
+    shiftErrors = {};
+    notice = '';
+    try {
+      await api.delete(`/signups/${shift.mySignup.id}`);
+      await load();
+    } catch (err) {
+      shiftErrors = { [shift.id]: describeSignupError(err) };
+    } finally {
+      busy = null;
+    }
+  }
+
+  const isPast = (shift: EventShift) => new Date(shift.startsAt) <= new Date();
 
   async function load() {
     try {
@@ -44,6 +87,8 @@
     {#if event.description}<p class="description">{event.description}</p>{/if}
   </header>
 
+  {#if notice}<p class="alert success" role="status">{notice}</p>{/if}
+
   {#if days.length === 0}
     <div class="card"><p>No shifts have been added yet.</p></div>
   {/if}
@@ -67,7 +112,25 @@
             <div class="spots">
               <span>{spotsLabel(shift)}</span>
               {#if shift.mySignup}<StatusBadge status={shift.mySignup.status} />{/if}
+              {#if event.status === 'published' && !isPast(shift)}
+                {#if shift.mySignup}
+                  <button
+                    class="secondary"
+                    disabled={busy === shift.id}
+                    onclick={() => cancel(shift)}
+                  >
+                    {shift.mySignup.status === 'waitlisted' ? 'Leave waitlist' : 'Cancel'}
+                  </button>
+                {:else}
+                  <button disabled={busy === shift.id} onclick={() => signUp(shift)}>
+                    {shift.confirmedCount >= shift.capacity ? 'Join waitlist' : 'Sign up'}
+                  </button>
+                {/if}
+              {/if}
             </div>
+            {#if shiftErrors[shift.id]}
+              <p class="alert shift-error" role="alert">{shiftErrors[shift.id]}</p>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -93,6 +156,7 @@
 
   .shift {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
@@ -100,6 +164,11 @@
 
   .shift strong {
     margin-right: 0.5rem;
+  }
+
+  .shift-error {
+    flex-basis: 100%;
+    margin: 0;
   }
 
   .notes {
