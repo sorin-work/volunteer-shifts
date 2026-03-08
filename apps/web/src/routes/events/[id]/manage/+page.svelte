@@ -3,6 +3,7 @@
   import { api, ApiError } from '$lib/api';
   import EventForm, { type EventFormValues } from '$lib/components/EventForm.svelte';
   import RolesEditor from '$lib/components/RolesEditor.svelte';
+  import ShiftsEditor from '$lib/components/ShiftsEditor.svelte';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import type { EventDetails, VolunteerEvent } from '$lib/types';
 
@@ -78,6 +79,17 @@
     <section>
       <h2>Roles</h2>
       <RolesEditor eventId={event.id} roles={details.roles} onchange={load} />
+    </section>
+
+    <section>
+      <h2>Shifts</h2>
+      <ShiftsEditor
+        eventId={event.id}
+        timezone={event.timezone}
+        roles={details.roles}
+        shifts={details.shifts}
+        onchange={load}
+      />
     </section>
   {:else}
     <p class="alert warning">This event was cancelled and can no longer be edited.</p>
