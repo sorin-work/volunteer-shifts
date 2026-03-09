@@ -3,6 +3,7 @@
   import { api, ApiError } from '$lib/api';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import { formatDate, formatTimeRange, groupByDate, spotsLabel } from '$lib/format';
+  import { isCoordinator } from '$lib/session.svelte';
   import { describeSignupError } from '$lib/signup-errors';
   import type { EventDetails, EventShift, Signup } from '$lib/types';
 
@@ -76,7 +77,11 @@
 {:else}
   {@const event = details.event}
   <header class="stack">
-    <p><a href="/events">← All events</a></p>
+    <p class="top">
+      <a href="/events">← All events</a>
+      {#if isCoordinator()}<a class="button secondary" href="/events/{event.id}/manage">Manage</a
+        >{/if}
+    </p>
     <h1>
       {event.name}
       {#if event.status !== 'published'}<StatusBadge status={event.status} />{/if}
@@ -139,6 +144,12 @@
 {/if}
 
 <style>
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .description {
     white-space: pre-line;
   }
