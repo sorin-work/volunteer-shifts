@@ -5,6 +5,7 @@
   import { formatDate, formatTimeRange, groupByDate, spotsLabel } from '$lib/format';
   import { isCoordinator } from '$lib/session.svelte';
   import { describeSignupError } from '$lib/signup-errors';
+  import { formatDescription } from '$lib/text';
   import type { EventDetails, EventShift, Signup } from '$lib/types';
 
   let details = $state<EventDetails | null>(null);
@@ -89,7 +90,10 @@
     <p class="muted">
       {#if event.location}{event.location} ·{/if} Times are shown in {event.timezone}
     </p>
-    {#if event.description}<p class="description">{event.description}</p>{/if}
+    {#if event.description}
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+      <p class="description">{@html formatDescription(event.description)}</p>
+    {/if}
   </header>
 
   {#if notice}<p class="alert success" role="status">{notice}</p>{/if}
@@ -151,7 +155,7 @@
   }
 
   .description {
-    white-space: pre-line;
+    max-width: 65ch;
   }
 
   .day {
