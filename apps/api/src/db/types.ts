@@ -61,6 +61,7 @@ export interface ShiftsTable {
 }
 
 export type SignupStatus = 'confirmed' | 'waitlisted' | 'cancelled';
+export type Attendance = 'pending' | 'present' | 'no_show';
 
 export interface SignupsTable {
   id: Generated<number>;
@@ -69,6 +70,9 @@ export interface SignupsTable {
   status: SignupStatus;
   created_at: Timestamp;
   cancelled_at: Timestamp | null;
+  attendance: ColumnType<Attendance, Attendance | undefined, Attendance>;
+  checked_in_at: Timestamp | null;
+  attendance_marked_by: number | null;
 }
 
 export interface SkillsTable {
