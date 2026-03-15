@@ -15,6 +15,8 @@ export function toSignupDto(signup: Signup) {
     status: signup.status,
     createdAt: signup.created_at.toISOString(),
     cancelledAt: signup.cancelled_at?.toISOString() ?? null,
+    attendance: signup.attendance,
+    checkedInAt: signup.checked_in_at?.toISOString() ?? null,
   };
 }
 

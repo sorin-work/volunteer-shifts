@@ -4,6 +4,7 @@ import { pinoHttp } from 'pino-http';
 import type { AppContext } from './context.js';
 import { loadSession } from './middleware/auth.js';
 import { createErrorHandler, notFoundHandler } from './middleware/errors.js';
+import { attendanceRoutes } from './modules/attendance/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { eventRoutes } from './modules/events/routes.js';
 import { roleRoutes } from './modules/roles/routes.js';
@@ -37,6 +38,7 @@ export function createApp(ctx: AppContext) {
   app.use('/api', roleRoutes(ctx));
   app.use('/api', shiftRoutes(ctx));
   app.use('/api', signupRoutes(ctx));
+  app.use('/api', attendanceRoutes(ctx));
 
   app.use('/api', notFoundHandler);
   app.use(createErrorHandler(ctx.logger));
