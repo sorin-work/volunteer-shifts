@@ -91,6 +91,18 @@ export interface RoleSkillsTable {
   skill_id: number;
 }
 
+export interface HourEntriesTable {
+  id: Generated<number>;
+  user_id: number;
+  signup_id: number | null;
+  worked_on: DateString;
+  /** NUMERIC(5,2); parsed to a number. */
+  hours: ColumnType<number, number | string, number | string>;
+  description: ColumnType<string, string | undefined, string>;
+  created_by: number | null;
+  created_at: Timestamp;
+}
+
 export interface DB {
   users: UsersTable;
   sessions: SessionsTable;
@@ -101,6 +113,7 @@ export interface DB {
   skills: SkillsTable;
   user_skills: UserSkillsTable;
   role_skills: RoleSkillsTable;
+  hour_entries: HourEntriesTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -112,3 +125,4 @@ export type Role = Selectable<RolesTable>;
 export type Shift = Selectable<ShiftsTable>;
 export type Signup = Selectable<SignupsTable>;
 export type Skill = Selectable<SkillsTable>;
+export type HourEntry = Selectable<HourEntriesTable>;
