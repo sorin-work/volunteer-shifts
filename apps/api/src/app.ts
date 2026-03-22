@@ -7,6 +7,7 @@ import { createErrorHandler, notFoundHandler } from './middleware/errors.js';
 import { attendanceRoutes } from './modules/attendance/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { eventRoutes } from './modules/events/routes.js';
+import { hoursRoutes } from './modules/hours/routes.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { shiftRoutes } from './modules/shifts/routes.js';
 import { signupRoutes } from './modules/signups/routes.js';
@@ -39,6 +40,7 @@ export function createApp(ctx: AppContext) {
   app.use('/api', shiftRoutes(ctx));
   app.use('/api', signupRoutes(ctx));
   app.use('/api', attendanceRoutes(ctx));
+  app.use('/api', hoursRoutes(ctx));
 
   app.use('/api', notFoundHandler);
   app.use(createErrorHandler(ctx.logger));
