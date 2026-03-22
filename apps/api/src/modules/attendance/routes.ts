@@ -5,6 +5,7 @@ import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
 import { currentUser, requireCoordinator } from '../../middleware/auth.js';
+import { creditShiftHours, removeShiftHours } from '../hours/credit.js';
 import { requiredSkillsByRole, toRoleDto } from '../roles/dto.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { toSignupDto } from '../signups/routes.js';
@@ -74,8 +75,15 @@ export function attendanceRoutes(ctx: AppContext): Router {
     const signup = await ctx.db
       .selectFrom('signups')
       .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+      .innerJoin('events', 'events.id', 'shifts.event_id')
+      .innerJoin('roles', 'roles.id', 'shifts.role_id')
       .selectAll('signups')
-      .select(['shifts.starts_at', 'shifts.ends_at'])
+      .select([
+        'shifts.starts_at',
+        'shifts.ends_at',
+        'events.name as event_name',
+        'roles.name as role_name',
+      ])
       .where('signups.id', '=', idParam(req.params.id, 'Signup'))
       .executeTakeFirst();
     if (!signup) throw notFound('Signup');
@@ -103,6 +111,12 @@ export function attendanceRoutes(ctx: AppContext): Router {
       .where('id', '=', signup.id)
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    if (attendance === 'present' && signup.attendance !== 'present') {
+      await creditShiftHours(ctx, signup, currentUser(req).id);
+    } else if (attendance !== 'present' && signup.attendance === 'present') {
+      await removeShiftHours(ctx, signup.id);
+    }
     res.json({ signup: toSignupDto(updated) });
   });
 
