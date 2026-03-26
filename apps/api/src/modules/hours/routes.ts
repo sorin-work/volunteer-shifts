@@ -1,10 +1,23 @@
 import { Router, type Request } from 'express';
 import { sql } from 'kysely';
+import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import type { HourEntry } from '../../db/types.js';
-import { forbidden, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
-import { currentUser, requireAuth } from '../../middleware/auth.js';
+import { isIsoDate } from '../../lib/time.js';
+import { validate } from '../../lib/validate.js';
+import { currentUser, requireAuth, requireCoordinator } from '../../middleware/auth.js';
+
+const manualEntrySchema = z.object({
+  workedOn: z.string().refine(isIsoDate, 'Use a date like 2026-05-30.'),
+  hours: z
+    .number()
+    .min(0.25, 'At least a quarter of an hour.')
+    .max(24, 'At most 24 hours in one entry.')
+    .multipleOf(0.25, 'Use quarter hours, like 1.5 or 2.75.'),
+  description: z.string().trim().min(1, 'Say what the time was for.').max(300),
+});
 
 export function toHourEntryDto(entry: HourEntry) {
   return {
@@ -77,6 +90,51 @@ export function hoursRoutes(ctx: AppContext): Router {
       entries: entries.map(toHourEntryDto),
       totals: await yearlyTotals(ctx, userId),
     });
+  });
+
+  // Coordinators log time that didn't come from a shift, like a training
+  // session or driving donations around.
+  router.post('/volunteers/:id/hours', requireCoordinator, async (req, res) => {
+    const userId = idParam(req.params.id, 'Volunteer');
+    const input = validate(manualEntrySchema, req.body);
+    if (input.workedOn > ctx.now().toISOString().slice(0, 10)) {
+      throw badRequest("Hours can't be logged for a future date.");
+    }
+    const user = await ctx.db
+      .selectFrom('users')
+      .select('id')
+      .where('id', '=', userId)
+      .executeTakeFirst();
+    if (!user) throw notFound('Volunteer');
+    const entry = await ctx.db
+      .insertInto('hour_entries')
+      .values({
+        user_id: userId,
+        worked_on: input.workedOn,
+        hours: input.hours,
+        description: input.description,
+        created_by: currentUser(req).id,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    res.status(201).json({ entry: toHourEntryDto(entry) });
+  });
+
+  router.delete('/hours/:id', requireCoordinator, async (req, res) => {
+    const entry = await ctx.db
+      .selectFrom('hour_entries')
+      .selectAll()
+      .where('id', '=', idParam(req.params.id, 'Hour entry'))
+      .executeTakeFirst();
+    if (!entry) throw notFound('Hour entry');
+    if (entry.signup_id) {
+      throw conflict(
+        'credited_from_shift',
+        'These hours come from a check-in, undo the check-in instead.',
+      );
+    }
+    await ctx.db.deleteFrom('hour_entries').where('id', '=', entry.id).execute();
+    res.status(204).end();
   });
 
   return router;
