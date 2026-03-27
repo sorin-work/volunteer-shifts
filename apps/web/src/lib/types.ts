@@ -88,3 +88,45 @@ export interface EventSummary extends VolunteerEvent {
   shiftCount: number;
   totalSpots: number;
 }
+
+export type Attendance = 'pending' | 'present' | 'no_show';
+
+export interface RosterEntry {
+  signupId: number;
+  status: SignupStatus;
+  attendance: Attendance;
+  checkedInAt: string | null;
+  signedUpAt: string;
+  volunteer: { id: number; name: string; email: string; phone: string | null };
+}
+
+export interface Roster {
+  shift: Shift;
+  event: { id: number; name: string; timezone: string };
+  role: EventRole;
+  confirmed: RosterEntry[];
+  waitlist: RosterEntry[];
+}
+
+export interface HourEntry {
+  id: number;
+  userId: number;
+  signupId: number | null;
+  workedOn: string;
+  hours: number;
+  description: string;
+  source: 'shift' | 'manual';
+  createdAt: string;
+}
+
+export interface YearTotal {
+  year: number;
+  hours: number;
+  entries: number;
+}
+
+export interface HoursLog {
+  volunteer: { id: number; name: string };
+  entries: HourEntry[];
+  totals: YearTotal[];
+}
