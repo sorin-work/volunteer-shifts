@@ -12,6 +12,10 @@ const schema = z.object({
     .positive()
     .default(24 * 14),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
+  SEED_DEMO: z
+    .enum(['true', 'false', '1', '0', ''])
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

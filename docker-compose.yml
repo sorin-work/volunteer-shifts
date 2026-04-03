@@ -24,6 +24,9 @@ services:
     environment:
       DATABASE_URL: postgres://volunteer:volunteer@db:5432/volunteer_shifts
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Creates coordinator@example.org and volunteer@example.org (password: demo-password)
+      # with a few events on first start.
+      SEED_DEMO: ${SEED_DEMO:-true}
     depends_on:
       db:
         condition: service_healthy
