@@ -10,6 +10,8 @@ services:
       POSTGRES_DB: volunteer_shifts
     volumes:
       - db-data:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U volunteer -d volunteer_shifts']
       interval: 5s
