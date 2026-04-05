@@ -29,9 +29,20 @@ services:
       # Creates coordinator@example.org and volunteer@example.org (password: demo-password)
       # with a few events on first start.
       SEED_DEMO: ${SEED_DEMO:-true}
+      SMTP_URL: smtp://mailpit:1025
+      APP_URL: http://localhost:${WEB_PORT:-4420}
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  # Catches every email the app sends; browse them at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_PORT:-8025}:8025'
 
   web:
     build:
