@@ -16,6 +16,9 @@ const schema = z.object({
     .enum(['true', 'false', '1', '0', ''])
     .default('false')
     .transform((v) => v === 'true' || v === '1'),
+  APP_URL: z.string().url().default('http://localhost:4420'),
+  SMTP_URL: z.string().optional(),
+  MAIL_FROM: z.string().default('Volunteer Shifts <no-reply@volunteer-shifts.local>'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

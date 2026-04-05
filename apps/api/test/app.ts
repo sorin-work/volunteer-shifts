@@ -5,6 +5,7 @@ import type { AppContext } from '../src/context.js';
 import type { Database } from '../src/db/connection.js';
 import type { NewUser } from '../src/db/types.js';
 import { createLogger } from '../src/lib/logger.js';
+import { MemoryMailer } from '../src/mail/mailer.js';
 import { hashPassword } from '../src/modules/auth/passwords.js';
 
 export const TEST_PASSWORD = 'password123';
@@ -14,6 +15,7 @@ export function testConfig() {
 }
 
 export interface TestContext extends AppContext {
+  mailer: MemoryMailer;
   /** Moves the injected clock; tests start at 2026-03-02 09:00 UTC. */
   setNow(date: Date | string): void;
 }
@@ -25,6 +27,7 @@ export function buildContext(db: Database): TestContext {
     db,
     config,
     logger: createLogger(config),
+    mailer: new MemoryMailer(),
     now: () => now,
     setNow: (d) => {
       now = new Date(d);
