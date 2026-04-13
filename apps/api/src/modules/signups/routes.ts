@@ -3,6 +3,9 @@ import type { AppContext } from '../../context.js';
 import type { Signup } from '../../db/types.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
+import { sendSafely } from '../../mail/mailer.js';
+import { shiftMailInfo } from '../../mail/shift-info.js';
+import { templates } from '../../mail/templates.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
 import { promoteFromWaitlist, signUp, waitlistPosition } from './service.js';
@@ -24,10 +27,18 @@ export function signupRoutes(ctx: AppContext): Router {
   const router = Router();
 
   router.post('/shifts/:id/signups', requireAuth, async (req, res) => {
-    const { signup } = await signUp(ctx, currentUser(req), idParam(req.params.id, 'Shift'));
-    res.status(201).json({
-      signup: { ...toSignupDto(signup), waitlistPosition: await waitlistPosition(ctx, signup) },
-    });
+    const user = currentUser(req);
+    const { signup, shift } = await signUp(ctx, user, idParam(req.params.id, 'Shift'));
+    const position = await waitlistPosition(ctx, signup);
+    const info = shiftMailInfo(ctx, shift, user);
+    await sendSafely(
+      ctx.mailer,
+      ctx.logger,
+      position === null
+        ? templates.signupConfirmed(user.email, info)
+        : templates.signupWaitlisted(user.email, info, position),
+    );
+    res.status(201).json({ signup: { ...toSignupDto(signup), waitlistPosition: position } });
   });
 
   router.get('/me/signups', requireAuth, async (req, res) => {

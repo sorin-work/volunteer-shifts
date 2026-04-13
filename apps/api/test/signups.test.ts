@@ -37,6 +37,14 @@ describe('signups', () => {
     expect(res.body.signup).toMatchObject({ shiftId: shift.id, status: 'confirmed' });
   });
 
+  it('emails a confirmation', async () => {
+    const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+    await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    const [mail] = ctx.mailer.to('vol@example.org');
+    expect(mail?.subject).toBe("You're signed up: Food bank Saturday");
+    expect(mail?.text).toContain('Sorting');
+  });
+
   it('rejects signing up twice', async () => {
     const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
     await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);

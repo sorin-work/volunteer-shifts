@@ -13,6 +13,7 @@ export async function getShiftWithEvent(ctx: AppContext, shiftId: number) {
       'events.name as event_name',
       'events.status as event_status',
       'events.timezone as event_timezone',
+      'events.location as event_location',
       'roles.name as role_name',
       'roles.min_age as role_min_age',
     ])
