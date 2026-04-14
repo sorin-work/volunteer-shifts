@@ -19,6 +19,8 @@ const schema = z.object({
   APP_URL: z.string().url().default('http://localhost:4420'),
   SMTP_URL: z.string().optional(),
   MAIL_FROM: z.string().default('Volunteer Shifts <no-reply@volunteer-shifts.local>'),
+  REMINDER_LEAD_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  REMINDER_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(10),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

@@ -73,6 +73,7 @@ export interface SignupsTable {
   attendance: ColumnType<Attendance, Attendance | undefined, Attendance>;
   checked_in_at: Timestamp | null;
   attendance_marked_by: number | null;
+  reminder_sent_at: Timestamp | null;
 }
 
 export interface SkillsTable {
