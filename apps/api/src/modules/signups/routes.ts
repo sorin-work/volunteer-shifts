@@ -8,7 +8,7 @@ import { shiftMailInfo } from '../../mail/shift-info.js';
 import { templates } from '../../mail/templates.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
-import { promoteFromWaitlist, signUp, waitlistPosition } from './service.js';
+import { notifyPromoted, promoteFromWaitlist, signUp, waitlistPosition } from './service.js';
 
 export function toSignupDto(signup: Signup) {
   return {
@@ -121,7 +121,9 @@ export function signupRoutes(ctx: AppContext): Router {
       .where('id', '=', signup.id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    if (signup.status === 'confirmed') await promoteFromWaitlist(ctx, signup.shift_id);
+    if (signup.status === 'confirmed') {
+      await notifyPromoted(ctx, await promoteFromWaitlist(ctx, signup.shift_id));
+    }
     res.json({ signup: toSignupDto(updated) });
   });
 

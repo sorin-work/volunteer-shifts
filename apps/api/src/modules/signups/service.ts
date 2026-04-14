@@ -1,6 +1,9 @@
 import type { AppContext } from '../../context.js';
-import type { User } from '../../db/types.js';
+import type { Signup, User } from '../../db/types.js';
 import { conflict, notFound } from '../../lib/errors.js';
+import { sendSafely } from '../../mail/mailer.js';
+import { shiftMailInfo } from '../../mail/shift-info.js';
+import { templates } from '../../mail/templates.js';
 import { assertEligible } from './eligibility.js';
 
 export async function getShiftWithEvent(ctx: AppContext, shiftId: number) {
@@ -157,4 +160,26 @@ export async function promoteFromWaitlist(ctx: AppContext, shiftId: number) {
     )
     .returningAll()
     .execute();
+}
+
+/** Lets people who moved up from the waitlist know they're on the shift. */
+export async function notifyPromoted(ctx: AppContext, promoted: Signup[]) {
+  if (!promoted.length) return;
+  const shift = await getShiftWithEvent(ctx, promoted[0]!.shift_id);
+  const users = await ctx.db
+    .selectFrom('users')
+    .select(['id', 'name', 'email'])
+    .where(
+      'id',
+      'in',
+      promoted.map((p) => p.user_id),
+    )
+    .execute();
+  for (const user of users) {
+    await sendSafely(
+      ctx.mailer,
+      ctx.logger,
+      templates.promoted(user.email, shiftMailInfo(ctx, shift, user)),
+    );
+  }
 }

@@ -7,7 +7,7 @@ import { isIsoDate, isTimeOfDay } from '../../lib/time.js';
 import { validate } from '../../lib/validate.js';
 import { requireCoordinator } from '../../middleware/auth.js';
 import { getEditableEvent } from '../events/queries.js';
-import { promoteFromWaitlist } from '../signups/service.js';
+import { notifyPromoted, promoteFromWaitlist } from '../signups/service.js';
 import { toShiftDto } from './dto.js';
 import { durationHours, MAX_SHIFT_HOURS, resolveShiftTimes } from './schedule.js';
 
@@ -93,7 +93,9 @@ export function shiftRoutes(ctx: AppContext): Router {
       .where('id', '=', shift.id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    if (updated.capacity > shift.capacity) await promoteFromWaitlist(ctx, shift.id);
+    if (updated.capacity > shift.capacity) {
+      await notifyPromoted(ctx, await promoteFromWaitlist(ctx, shift.id));
+    }
     res.json({ shift: toShiftDto(updated, event.timezone) });
   });
 

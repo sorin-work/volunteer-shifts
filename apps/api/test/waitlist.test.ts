@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../src/db/connection.js';
-import { buildApp, buildContext, createUser, loginAs } from './app.js';
+import { buildApp, buildContext, createUser, loginAs, type TestContext } from './app.js';
 import { createTestDatabase, resetDatabase } from './db.js';
 import { createEvent, createRole, createShift } from './fixtures.js';
 
 describe('waitlist', () => {
   let db: Database;
+  let ctx: TestContext;
   let app: ReturnType<typeof buildApp>;
   let shiftId: number;
 
@@ -14,7 +15,8 @@ describe('waitlist', () => {
   });
   beforeEach(async () => {
     await resetDatabase(db);
-    app = buildApp(buildContext(db));
+    ctx = buildContext(db);
+    app = buildApp(ctx);
     const event = await createEvent(db);
     const role = await createRole(db, event.id);
     const shift = await createShift(db, {
@@ -57,6 +59,10 @@ describe('waitlist', () => {
     const ben = await volunteer('ben');
     await ana.agent.delete(`/api/signups/${ana.signup.id}`).expect(200);
     expect(await statusOf(ben.signup.id)).toBe('confirmed');
+    expect(ctx.mailer.to('ben@example.org').map((m) => m.subject)).toEqual([
+      "You're on the waitlist: Food bank Saturday",
+      'A spot opened up: Food bank Saturday',
+    ]);
   });
 
   it('does not promote anyone when a waitlisted volunteer leaves', async () => {
