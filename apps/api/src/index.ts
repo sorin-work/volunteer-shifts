@@ -4,6 +4,7 @@ import { createDatabase } from './db/connection.js';
 import { migrateToLatest } from './db/migrate.js';
 import { createLogger } from './lib/logger.js';
 import { createSmtpMailer, MemoryMailer } from './mail/mailer.js';
+import { startReminderLoop } from './modules/reminders/scheduler.js';
 import { seedDemo } from './seed/demo.js';
 
 const config = loadConfig();
@@ -19,12 +20,15 @@ const mailer = config.SMTP_URL
   ? createSmtpMailer(config.SMTP_URL, config.MAIL_FROM)
   : new MemoryMailer();
 
-const app = createApp({ db, config, logger, mailer, now: () => new Date() });
+const ctx = { db, config, logger, mailer, now: () => new Date() };
+const app = createApp(ctx);
+const stopReminders = startReminderLoop(ctx);
 const server = app.listen(config.PORT, () => {
   logger.info(`api listening on http://localhost:${config.PORT}`);
 });
 
 async function shutdown() {
+  stopReminders();
   server.close();
   await db.destroy();
   process.exit(0);
