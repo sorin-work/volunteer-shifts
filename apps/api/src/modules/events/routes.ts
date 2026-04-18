@@ -3,6 +3,9 @@ import type { AppContext } from '../../context.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
+import { sendSafely } from '../../mail/mailer.js';
+import { shiftMailInfo } from '../../mail/shift-info.js';
+import { templates } from '../../mail/templates.js';
 import { currentUser, requireAuth, requireCoordinator } from '../../middleware/auth.js';
 import { requiredSkillsByRole, toRoleDto } from '../roles/dto.js';
 import { toShiftDto } from '../shifts/dto.js';
@@ -167,6 +170,41 @@ export function eventRoutes(ctx: AppContext): Router {
       .where('id', '=', event.id)
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    if (event.status === 'published') {
+      // Let everyone with an upcoming shift know it won't happen.
+      const affected = await ctx.db
+        .selectFrom('signups')
+        .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+        .innerJoin('roles', 'roles.id', 'shifts.role_id')
+        .innerJoin('users', 'users.id', 'signups.user_id')
+        .select([
+          'shifts.event_id',
+          'shifts.starts_at',
+          'shifts.ends_at',
+          'shifts.notes',
+          'roles.name as role_name',
+          'users.name',
+          'users.email',
+        ])
+        .where('shifts.event_id', '=', event.id)
+        .where('shifts.starts_at', '>', ctx.now())
+        .where('signups.status', '<>', 'cancelled')
+        .execute();
+      for (const row of affected) {
+        const info = shiftMailInfo(
+          ctx,
+          {
+            ...row,
+            event_name: event.name,
+            event_timezone: event.timezone,
+            event_location: event.location,
+          },
+          row,
+        );
+        await sendSafely(ctx.mailer, ctx.logger, templates.eventCancelled(row.email, info));
+      }
+    }
     res.json({ event: toEventDto(updated) });
   });
 

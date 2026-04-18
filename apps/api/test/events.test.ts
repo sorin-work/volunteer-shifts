@@ -1,12 +1,13 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../src/db/connection.js';
-import { buildApp, buildContext, createUser, loginAs } from './app.js';
+import { buildApp, buildContext, createUser, loginAs, type TestContext } from './app.js';
 import { createTestDatabase, resetDatabase } from './db.js';
 import { createRole, createShift } from './fixtures.js';
 
 describe('events routes', () => {
   let db: Database;
+  let ctx: TestContext;
   let app: ReturnType<typeof buildApp>;
   let coordinator: Awaited<ReturnType<typeof loginAs>>;
   let volunteer: Awaited<ReturnType<typeof loginAs>>;
@@ -16,7 +17,8 @@ describe('events routes', () => {
   });
   beforeEach(async () => {
     await resetDatabase(db);
-    app = buildApp(buildContext(db));
+    ctx = buildContext(db);
+    app = buildApp(ctx);
     await createUser(db, { email: 'coord@example.org', role: 'coordinator' });
     await createUser(db, { email: 'vol@example.org' });
     coordinator = await loginAs(app, 'coord@example.org');
@@ -129,6 +131,24 @@ describe('events routes', () => {
       shiftCount: 0,
       firstShiftAt: null,
     });
+  });
+
+  it('emails volunteers with upcoming shifts when an event is cancelled', async () => {
+    const event = await createEvent({ name: 'Beach clean' });
+    await coordinator.post(`/api/events/${event.id}/publish`).expect(200);
+    const role = await createRole(db, event.id);
+    const shift = await createShift(db, {
+      eventId: event.id,
+      roleId: role.id,
+      startsAt: '2026-03-14T10:00:00Z',
+      endsAt: '2026-03-14T12:00:00Z',
+    });
+    await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    ctx.mailer.clear();
+    await coordinator.post(`/api/events/${event.id}/cancel`).expect(200);
+    expect(ctx.mailer.to('vol@example.org').map((m) => m.subject)).toEqual([
+      'Cancelled: Beach clean',
+    ]);
   });
 
   it('returns 404 for unknown or malformed ids', async () => {
