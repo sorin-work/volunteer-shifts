@@ -21,6 +21,7 @@ const schema = z.object({
   MAIL_FROM: z.string().default('Volunteer Shifts <no-reply@volunteer-shifts.local>'),
   REMINDER_LEAD_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   REMINDER_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(10),
+  ORG_NAME: z.string().default('Riverside Community Volunteers'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
