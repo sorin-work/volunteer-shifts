@@ -7,6 +7,9 @@
     log,
     entryActions,
   }: { log: HoursLog; entryActions?: Snippet<[HoursLog['entries'][number]]> } = $props();
+
+  const certificateUrl = (year: number) =>
+    `/api/volunteers/${log.volunteer.id}/certificates/${year}`;
 </script>
 
 {#if log.totals.length === 0}
@@ -20,6 +23,7 @@
         <span class="muted">{total.year}</span>
         <strong>{formatHours(total.hours)}</strong>
         <span class="muted">{total.entries} entr{total.entries === 1 ? 'y' : 'ies'}</span>
+        <a href={certificateUrl(total.year)} download>Certificate (PDF)</a>
       </div>
     {/each}
   </div>
