@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import { badRequest, notFound } from '../../lib/errors.js';
+import { pageInfo, parsePage } from '../../lib/pagination.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
 import { requireCoordinator } from '../../middleware/auth.js';
@@ -20,6 +21,39 @@ export async function skillsForUser(ctx: AppContext, userId: number) {
 
 export function volunteerRoutes(ctx: AppContext): Router {
   const router = Router();
+
+  router.get('/', requireCoordinator, async (req, res) => {
+    const paging = parsePage(req.query);
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    let base = ctx.db.selectFrom('users');
+    if (search) {
+      const pattern = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      base = base.where((eb) =>
+        eb.or([eb('name', 'ilike', pattern), eb('email', 'ilike', pattern)]),
+      );
+    }
+    const [{ total }, rows] = await Promise.all([
+      base.select((eb) => eb.fn.countAll<number>().as('total')).executeTakeFirstOrThrow(),
+      base
+        .select(['id', 'name', 'email', 'phone', 'role', 'created_at'])
+        .orderBy('name')
+        .orderBy('id')
+        .limit(paging.pageSize)
+        .offset(paging.offset)
+        .execute(),
+    ]);
+    res.json({
+      volunteers: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        role: r.role,
+        joinedAt: r.created_at.toISOString(),
+      })),
+      ...pageInfo(paging, Number(total)),
+    });
+  });
 
   // Skills are confirmed by coordinators (e.g. after checking a food hygiene
   // certificate), so volunteers can't edit their own.
