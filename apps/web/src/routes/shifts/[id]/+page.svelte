@@ -61,7 +61,7 @@
         <tbody>
           {#each roster.confirmed as entry (entry.signupId)}
             <tr class={entry.attendance}>
-              <td>{entry.volunteer.name}</td>
+              <td><a href="/volunteers/{entry.volunteer.id}">{entry.volunteer.name}</a></td>
               <td>
                 <a href="mailto:{entry.volunteer.email}">{entry.volunteer.email}</a>
                 {#if entry.volunteer.phone}<br /><span class="muted">{entry.volunteer.phone}</span
