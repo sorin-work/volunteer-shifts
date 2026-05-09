@@ -130,3 +130,30 @@ export interface HoursLog {
   entries: HourEntry[];
   totals: YearTotal[];
 }
+
+export interface Paged {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface VolunteerListItem {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: Role;
+  joinedAt: string;
+}
+
+export interface VolunteerProfile {
+  volunteer: User & { skills: SkillRef[]; joinedAt: string };
+  stats: {
+    upcomingShifts: number;
+    attended: number;
+    noShows: number;
+    hoursThisYear: number;
+    totalHours: number;
+  };
+}
