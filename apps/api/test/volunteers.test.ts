@@ -54,6 +54,33 @@ describe('volunteer directory', () => {
     expect(res.body.volunteers).toHaveLength(0);
   });
 
+  it('shows a profile with attendance and hours', async () => {
+    const ada = await db
+      .selectFrom('users')
+      .select('id')
+      .where('email', '=', 'ada@example.org')
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('hour_entries')
+      .values([
+        { user_id: ada.id, worked_on: '2025-12-10', hours: 2, description: 'x' },
+        { user_id: ada.id, worked_on: '2026-02-01', hours: 3.5, description: 'y' },
+      ])
+      .execute();
+    const res = await coordinator.get(`/api/volunteers/${ada.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.volunteer).toMatchObject({ name: 'Ada Lovelace', skills: [] });
+    expect(res.body.stats).toEqual({
+      upcomingShifts: 0,
+      attended: 0,
+      noShows: 0,
+      hoursThisYear: 3.5,
+      totalHours: 5.5,
+    });
+    const own = await (await loginAs(app, 'ada@example.org')).get(`/api/volunteers/${ada.id}`);
+    expect(own.status).toBe(200);
+  });
+
   it('is coordinator-only', async () => {
     const agent = await loginAs(app, 'ada@example.org');
     expect((await agent.get('/api/volunteers')).status).toBe(403);

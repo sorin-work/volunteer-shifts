@@ -5,7 +5,9 @@ import { badRequest, notFound } from '../../lib/errors.js';
 import { pageInfo, parsePage } from '../../lib/pagination.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
-import { requireCoordinator } from '../../middleware/auth.js';
+import { toPublicUser } from '../../lib/users.js';
+import { requireAuth, requireCoordinator } from '../../middleware/auth.js';
+import { assertCanViewVolunteer } from '../hours/routes.js';
 
 const skillsSchema = z.object({ skillIds: z.array(z.number().int().positive()).max(50) });
 
@@ -52,6 +54,65 @@ export function volunteerRoutes(ctx: AppContext): Router {
         joinedAt: r.created_at.toISOString(),
       })),
       ...pageInfo(paging, Number(total)),
+    });
+  });
+
+  router.get('/:id', requireAuth, async (req, res) => {
+    const userId = idParam(req.params.id, 'Volunteer');
+    assertCanViewVolunteer(req, userId);
+    const user = await ctx.db
+      .selectFrom('users')
+      .selectAll()
+      .where('id', '=', userId)
+      .executeTakeFirst();
+    if (!user) throw notFound('Volunteer');
+
+    const now = ctx.now();
+    const yearStart = `${now.getUTCFullYear()}-01-01`;
+    const [attendance, upcoming, hours, skills] = await Promise.all([
+      ctx.db
+        .selectFrom('signups')
+        .select(['attendance', (eb) => eb.fn.countAll<number>().as('n')])
+        .where('user_id', '=', userId)
+        .where('status', '=', 'confirmed')
+        .groupBy('attendance')
+        .execute(),
+      ctx.db
+        .selectFrom('signups')
+        .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+        .select((eb) => eb.fn.countAll<number>().as('n'))
+        .where('signups.user_id', '=', userId)
+        .where('signups.status', 'in', ['confirmed', 'waitlisted'])
+        .where('shifts.starts_at', '>', now)
+        .executeTakeFirstOrThrow(),
+      ctx.db
+        .selectFrom('hour_entries')
+        .select((eb) => [
+          eb.fn.coalesce(eb.fn.sum<number>('hours'), eb.lit(0)).as('total'),
+          eb.fn
+            .coalesce(
+              eb.fn.sum<number>(
+                eb.case().when('worked_on', '>=', yearStart).then(eb.ref('hours')).end(),
+              ),
+              eb.lit(0),
+            )
+            .as('this_year'),
+        ])
+        .where('user_id', '=', userId)
+        .executeTakeFirstOrThrow(),
+      skillsForUser(ctx, userId),
+    ]);
+    const count = (a: string) => Number(attendance.find((r) => r.attendance === a)?.n ?? 0);
+
+    res.json({
+      volunteer: { ...toPublicUser(user), skills, joinedAt: user.created_at.toISOString() },
+      stats: {
+        upcomingShifts: Number(upcoming.n),
+        attended: count('present'),
+        noShows: count('no_show'),
+        hoursThisYear: Math.round(Number(hours.this_year) * 100) / 100,
+        totalHours: Math.round(Number(hours.total) * 100) / 100,
+      },
     });
   });
 
