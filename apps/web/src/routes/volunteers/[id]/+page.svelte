@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
+  import AddHoursForm from '$lib/components/AddHoursForm.svelte';
   import HoursLogView from '$lib/components/HoursLog.svelte';
   import { formatHours } from '$lib/format';
   import type { HoursLog, SkillRef, VolunteerProfile } from '$lib/types';
@@ -26,6 +27,16 @@
       selectedSkills = p.volunteer.skills.map((x) => x.id);
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Could not load this volunteer.';
+    }
+  }
+
+  async function removeEntry(id: number) {
+    if (!confirm('Delete this entry?')) return;
+    try {
+      await api.delete(`/hours/${id}`);
+      await load();
+    } catch (err) {
+      error = err instanceof ApiError ? err.message : 'Could not delete the entry.';
     }
   }
 
@@ -99,7 +110,14 @@
   {#if log}
     <section>
       <h2>Hours</h2>
-      <HoursLogView {log} />
+      <HoursLogView {log}>
+        {#snippet entryActions(entry)}
+          {#if entry.source === 'manual'}
+            <button class="secondary" onclick={() => removeEntry(entry.id)}>Delete</button>
+          {/if}
+        {/snippet}
+      </HoursLogView>
+      <AddHoursForm volunteerId={profile.volunteer.id} onadded={load} />
     </section>
   {/if}
 {:else if !error}
