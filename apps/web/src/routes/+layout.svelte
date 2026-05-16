@@ -35,7 +35,7 @@
       <a href="/my/hours">Hours</a>
       {#if session.user.role === 'coordinator'}<a href="/volunteers">Volunteers</a>{/if}
       <span class="spacer"></span>
-      <span class="muted user">{session.user.name}</span>
+      <a class="user" href="/settings">{session.user.name}</a>
       <button class="secondary" onclick={handleSignOut}>Sign out</button>
     </nav>
   </header>
