@@ -9,6 +9,7 @@ import { authRoutes } from './modules/auth/routes.js';
 import { certificateRoutes } from './modules/certificates/routes.js';
 import { eventRoutes } from './modules/events/routes.js';
 import { hoursRoutes } from './modules/hours/routes.js';
+import { profileRoutes } from './modules/profile/routes.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { shiftRoutes } from './modules/shifts/routes.js';
 import { signupRoutes } from './modules/signups/routes.js';
@@ -34,6 +35,7 @@ export function createApp(ctx: AppContext) {
   });
 
   app.use('/api/auth', authRoutes(ctx));
+  app.use('/api/me/profile', profileRoutes(ctx));
   app.use('/api/events', eventRoutes(ctx));
   app.use('/api/skills', skillRoutes(ctx));
   app.use('/api/volunteers', volunteerRoutes(ctx));
