@@ -52,6 +52,20 @@ describe('roles and shifts', () => {
       expect(res.body.role.name).toBe('Welcome desk');
     });
 
+    it('keeps the minimum age and description when only renaming', async () => {
+      const created = await coordinator
+        .post(`/api/events/${event.id}/roles`)
+        .send({ name: 'Driver', description: 'Van runs', minAge: 21 });
+      const res = await coordinator
+        .patch(`/api/roles/${created.body.role.id}`)
+        .send({ name: 'Van driver' });
+      expect(res.body.role).toMatchObject({
+        name: 'Van driver',
+        description: 'Van runs',
+        minAge: 21,
+      });
+    });
+
     it('refuses to delete a role that still has shifts', async () => {
       const role = await createRole(db, event.id);
       await createShift(db, {

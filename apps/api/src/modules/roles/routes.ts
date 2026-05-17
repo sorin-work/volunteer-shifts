@@ -8,12 +8,23 @@ import { requireCoordinator } from '../../middleware/auth.js';
 import { getEditableEvent } from '../events/queries.js';
 import { requiredSkillsByRole, toRoleDto } from './dto.js';
 
-const roleSchema = z.object({
+const roleFields = {
   name: z.string().trim().min(1, 'Name is required.').max(80),
-  description: z.string().trim().max(1000).default(''),
-  minAge: z.number().int().min(0).max(120).nullable().default(null),
-  skillIds: z.array(z.number().int().positive()).max(20).default([]),
+  description: z.string().trim().max(1000),
+  minAge: z.number().int().min(0).max(120).nullable(),
+  skillIds: z.array(z.number().int().positive()).max(20),
+};
+
+const createRoleSchema = z.object({
+  name: roleFields.name,
+  description: roleFields.description.default(''),
+  minAge: roleFields.minAge.default(null),
+  skillIds: roleFields.skillIds.default([]),
 });
+
+// No defaults here: zod applies defaults even inside .partial(), which
+// would reset fields the client didn't send.
+const updateRoleSchema = z.object(roleFields).partial();
 
 export function roleRoutes(ctx: AppContext): Router {
   const router = Router();
@@ -66,7 +77,7 @@ export function roleRoutes(ctx: AppContext): Router {
 
   router.post('/events/:id/roles', requireCoordinator, async (req, res) => {
     const event = await getEditableEvent(ctx.db, idParam(req.params.id, 'Event'));
-    const input = validate(roleSchema, req.body);
+    const input = validate(createRoleSchema, req.body);
     await assertNameFree(event.id, input.name);
     const role = await ctx.db
       .insertInto('roles')
@@ -85,10 +96,7 @@ export function roleRoutes(ctx: AppContext): Router {
   router.patch('/roles/:id', requireCoordinator, async (req, res) => {
     const role = await getRole(idParam(req.params.id, 'Role'));
     await getEditableEvent(ctx.db, role.event_id);
-    const input = validate(
-      roleSchema.partial().extend({ skillIds: roleSchema.shape.skillIds.unwrap().optional() }),
-      req.body,
-    );
+    const input = validate(updateRoleSchema, req.body);
     if (input.name) await assertNameFree(role.event_id, input.name, role.id);
     const updated = await ctx.db
       .updateTable('roles')
