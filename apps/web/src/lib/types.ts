@@ -87,6 +87,7 @@ export interface EventSummary extends VolunteerEvent {
   lastShiftEndsAt: string | null;
   shiftCount: number;
   totalSpots: number;
+  filledSpots: number;
 }
 
 export type Attendance = 'pending' | 'present' | 'no_show';

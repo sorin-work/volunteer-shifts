@@ -44,6 +44,13 @@ export function eventRoutes(ctx: AppContext): Router {
         eb.fn.max('shifts.ends_at').as('last_ends_at'),
         eb.fn.count<number>('shifts.id').as('shift_count'),
         eb.fn.coalesce(eb.fn.sum<number>('shifts.capacity'), eb.lit(0)).as('total_spots'),
+        eb
+          .selectFrom('signups')
+          .innerJoin('shifts as s2', 's2.id', 'signups.shift_id')
+          .select((sub) => sub.fn.countAll<number>().as('n'))
+          .whereRef('s2.event_id', '=', 'events.id')
+          .where('signups.status', '=', 'confirmed')
+          .as('filled_spots'),
       ])
       .groupBy('events.id');
     if (currentUser(req).role !== 'coordinator') {
@@ -72,6 +79,7 @@ export function eventRoutes(ctx: AppContext): Router {
         lastShiftEndsAt: r.last_ends_at ? new Date(r.last_ends_at).toISOString() : null,
         shiftCount: Number(r.shift_count),
         totalSpots: Number(r.total_spots),
+        filledSpots: Number(r.filled_spots ?? 0),
       })),
     });
   });

@@ -118,6 +118,7 @@ describe('events routes', () => {
       lastShiftEndsAt: '2026-04-02T12:00:00.000Z',
       shiftCount: 2,
       totalSpots: 10,
+      filledSpots: 0,
     });
     const pastList = await coordinator.get('/api/events?when=past');
     expect(pastList.body.events.map((e: { name: string }) => e.name)).toEqual(['Past']);
