@@ -108,7 +108,10 @@ export function signupRoutes(ctx: AppContext): Router {
       .select('shifts.starts_at')
       .where('signups.id', '=', idParam(req.params.id, 'Signup'))
       .executeTakeFirst();
-    if (!signup) throw notFound('Signup');
+    // Volunteers can only cancel their own signups; coordinators can remove anyone.
+    if (!signup || (user.role !== 'coordinator' && signup.user_id !== user.id)) {
+      throw notFound('Signup');
+    }
     if (signup.status === 'cancelled') {
       throw conflict('already_cancelled', 'This signup was already cancelled.');
     }

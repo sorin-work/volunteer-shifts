@@ -143,6 +143,30 @@ describe('signups', () => {
     expect((await volunteer.post(`/api/shifts/${shift.id}/signups`)).status).toBe(201);
   });
 
+  it("does not let a volunteer cancel someone else's signup", async () => {
+    const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z', 1);
+    const { body } = await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    await createUser(db, { email: 'mallory@example.org' });
+    const mallory = await loginAs(app, 'mallory@example.org');
+
+    const res = await mallory.delete(`/api/signups/${body.signup.id}`);
+    expect(res.status).toBe(404);
+    const row = await db
+      .selectFrom('signups')
+      .select('status')
+      .where('id', '=', body.signup.id)
+      .executeTakeFirstOrThrow();
+    expect(row.status).toBe('confirmed');
+  });
+
+  it('lets coordinators remove a volunteer from a shift', async () => {
+    const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+    const { body } = await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    await createUser(db, { email: 'coord@example.org', role: 'coordinator' });
+    const coord = await loginAs(app, 'coord@example.org');
+    expect((await coord.delete(`/api/signups/${body.signup.id}`)).status).toBe(200);
+  });
+
   it('does not cancel after the shift started', async () => {
     const shift = await shiftAt('2026-03-02T10:00:00Z', '2026-03-02T12:00:00Z');
     const { body } = await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
