@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '$lib/api';
+  import CoordinatorHome from '$lib/components/CoordinatorHome.svelte';
   import SignupList from '$lib/components/SignupList.svelte';
   import { session } from '$lib/session.svelte';
   import type { MySignup } from '$lib/types';
@@ -18,6 +19,10 @@
 <svelte:head><title>Volunteer Shifts</title></svelte:head>
 
 <h1>Hi {session.user?.name.split(' ')[0]}</h1>
+
+{#if session.user?.role === 'coordinator'}
+  <CoordinatorHome />
+{/if}
 
 <section class="stack">
   <h2>Your next shifts</h2>
