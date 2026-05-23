@@ -162,6 +162,35 @@ describe('roles and shifts', () => {
       ]);
     });
 
+    it('lists understaffed shifts in the coming week, emptiest first', async () => {
+      const role = await createRole(db, event.id);
+      const half = await createShift(db, {
+        eventId: event.id,
+        roleId: role.id,
+        startsAt: '2026-03-04T15:00:00Z',
+        endsAt: '2026-03-04T18:00:00Z',
+        capacity: 2,
+      });
+      const empty = await createShift(db, {
+        eventId: event.id,
+        roleId: role.id,
+        startsAt: '2026-03-05T15:00:00Z',
+        endsAt: '2026-03-05T18:00:00Z',
+        capacity: 2,
+      });
+      await createShift(db, {
+        eventId: event.id,
+        roleId: role.id,
+        startsAt: '2026-03-20T15:00:00Z',
+        endsAt: '2026-03-20T18:00:00Z',
+      });
+      await volunteer.post(`/api/shifts/${half.id}/signups`).expect(201);
+      const res = await coordinator.get('/api/shifts/understaffed');
+      expect(res.status).toBe(200);
+      expect(res.body.shifts.map((s: { id: number }) => s.id)).toEqual([empty.id, half.id]);
+      expect(res.body.shifts[1]).toMatchObject({ confirmedCount: 1, roleName: 'Sorting' });
+    });
+
     it('deletes a shift', async () => {
       const role = await createRole(db, event.id);
       const shift = await createShift(db, {

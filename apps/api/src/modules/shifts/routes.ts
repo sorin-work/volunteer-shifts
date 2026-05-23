@@ -54,6 +54,44 @@ export function shiftRoutes(ctx: AppContext): Router {
     return shift;
   }
 
+  /** Shifts in the next few days that still need people, emptiest first. */
+  router.get('/shifts/understaffed', requireCoordinator, async (req, res) => {
+    const days = Math.min(31, Math.max(1, Number(req.query.days) || 7));
+    const now = ctx.now();
+    const until = new Date(now.getTime() + days * 86_400_000);
+    const rows = await ctx.db
+      .selectFrom('shifts')
+      .innerJoin('events', 'events.id', 'shifts.event_id')
+      .innerJoin('roles', 'roles.id', 'shifts.role_id')
+      .selectAll('shifts')
+      .select((eb) => [
+        'events.name as event_name',
+        'events.timezone as event_timezone',
+        'roles.name as role_name',
+        eb
+          .selectFrom('signups')
+          .select((sub) => sub.fn.countAll<number>().as('n'))
+          .whereRef('signups.shift_id', '=', 'shifts.id')
+          .where('signups.status', '=', 'confirmed')
+          .as('confirmed'),
+      ])
+      .where('events.status', '=', 'published')
+      .where('shifts.starts_at', '>', now)
+      .where('shifts.starts_at', '<=', until)
+      .orderBy('shifts.starts_at')
+      .execute();
+    const shifts = rows
+      .map((r) => ({
+        ...toShiftDto(r, r.event_timezone),
+        eventName: r.event_name,
+        roleName: r.role_name,
+        confirmedCount: Number(r.confirmed ?? 0),
+      }))
+      .filter((s) => s.confirmedCount < s.capacity)
+      .sort((a, b) => a.confirmedCount / a.capacity - b.confirmedCount / b.capacity);
+    res.json({ shifts });
+  });
+
   router.post('/events/:id/shifts', requireCoordinator, async (req, res) => {
     const event = await getEditableEvent(ctx.db, idParam(req.params.id, 'Event'));
     const input = validate(shiftSchema, req.body);
