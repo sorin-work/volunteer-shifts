@@ -40,7 +40,12 @@
 
 {#if roster}
   <p><a href="/events/{roster.event.id}/manage">← {roster.event.name}</a></p>
-  <h1>{roster.role.name}</h1>
+  <div class="title">
+    <h1>{roster.role.name}</h1>
+    <a class="button secondary" href="/api/shifts/{roster.shift.id}/roster.csv" download
+      >Download CSV</a
+    >
+  </div>
   <p class="muted">
     {formatDate(roster.shift.date)} · {formatTimeRange(roster.shift)} ({roster.event.timezone}) ·
     {present} of {roster.confirmed.length} checked in
@@ -116,6 +121,13 @@
 {/if}
 
 <style>
+  .title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
   section {
     margin-top: 1.5rem;
   }
