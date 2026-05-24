@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
+import { toCsv } from '../../lib/csv.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { validate } from '../../lib/validate.js';
@@ -68,6 +69,42 @@ export function attendanceRoutes(ctx: AppContext): Router {
       confirmed: rows.filter((r) => r.status === 'confirmed').map(toEntry),
       waitlist: rows.filter((r) => r.status === 'waitlisted').map(toEntry),
     });
+  });
+
+  router.get('/shifts/:id/roster.csv', requireCoordinator, async (req, res) => {
+    const shift = await getShiftWithEvent(ctx, idParam(req.params.id, 'Shift'));
+    const rows = await ctx.db
+      .selectFrom('signups')
+      .innerJoin('users', 'users.id', 'signups.user_id')
+      .select([
+        'users.name',
+        'users.email',
+        'users.phone',
+        'signups.status',
+        'signups.attendance',
+        'signups.checked_in_at',
+      ])
+      .where('signups.shift_id', '=', shift.id)
+      .where('signups.status', '<>', 'cancelled')
+      .orderBy('signups.status')
+      .orderBy('signups.created_at')
+      .execute();
+    const csv = toCsv(
+      ['Name', 'Email', 'Phone', 'Status', 'Attendance', 'Checked in at'],
+      rows.map((r) => [
+        r.name,
+        r.email,
+        r.phone,
+        r.status,
+        r.attendance,
+        r.checked_in_at?.toISOString() ?? '',
+      ]),
+    );
+    const { date } = toShiftDto(shift, shift.event_timezone);
+    res
+      .type('text/csv; charset=utf-8')
+      .set('Content-Disposition', `attachment; filename="roster-${date}-shift-${shift.id}.csv"`)
+      .send(csv);
   });
 
   router.post('/signups/:id/attendance', requireCoordinator, async (req, res) => {

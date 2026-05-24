@@ -62,6 +62,19 @@ describe('roster and attendance', () => {
       expect(res.body.waitlist).toHaveLength(1);
     });
 
+    it('exports the roster as csv', async () => {
+      await signUp();
+      const res = await coordinator.get(`/api/shifts/${shiftId}/roster.csv`);
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toBe('text/csv; charset=utf-8');
+      expect(res.headers['content-disposition']).toContain('roster-2026-03-07');
+      expect(res.text.split('\r\n')).toEqual([
+        'Name,Email,Phone,Status,Attendance,Checked in at',
+        'Vera Volunteer,vol@example.org,0700 000 111,confirmed,pending,',
+        '',
+      ]);
+    });
+
     it('is not available to volunteers', async () => {
       expect((await volunteer.get(`/api/shifts/${shiftId}/roster`)).status).toBe(403);
     });
