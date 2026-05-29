@@ -74,6 +74,23 @@
     }
   }
 
+  let copyFrom = $state<string | null>(null);
+  let copyTo = $state('');
+
+  async function copyDay(event: SubmitEvent) {
+    event.preventDefault();
+    if (!copyFrom || !copyTo) return;
+    error = '';
+    try {
+      await api.post(`/events/${eventId}/shifts/copy`, { fromDate: copyFrom, toDate: copyTo });
+      copyFrom = null;
+      copyTo = '';
+      await onchange();
+    } catch (err) {
+      error = err instanceof ApiError ? err.message : 'Could not copy the shifts.';
+    }
+  }
+
   async function remove(shift: EventShift) {
     const taken = shift.confirmedCount + shift.waitlistCount;
     const warning = taken ? ` ${taken} volunteer(s) are signed up.` : '';
@@ -93,7 +110,19 @@
   {:else}
     {#each days as day (day.date)}
       <div>
-        <h3>{formatDate(day.date)}</h3>
+        <div class="day-header">
+          <h3>{formatDate(day.date)}</h3>
+          <button class="secondary small" onclick={() => (copyFrom = day.date)}>Copy day…</button>
+        </div>
+        {#if copyFrom === day.date}
+          <form class="copy" onsubmit={copyDay}>
+            <label for="copy-to">Copy these shifts to</label>
+            <input id="copy-to" type="date" bind:value={copyTo} required />
+            <button type="submit">Copy</button>
+            <button type="button" class="secondary" onclick={() => (copyFrom = null)}>Cancel</button
+            >
+          </form>
+        {/if}
         <ul class="shifts">
           {#each day.shifts as shift (shift.id)}
             <li>
@@ -173,6 +202,33 @@
     gap: 1rem;
     padding: 0.4rem 0;
     border-bottom: 1px solid var(--border);
+  }
+
+  .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .small {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .copy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .copy label {
+    margin: 0;
+  }
+
+  .copy input {
+    width: auto;
   }
 
   .row-actions {
