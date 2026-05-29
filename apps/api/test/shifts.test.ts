@@ -191,6 +191,42 @@ describe('roles and shifts', () => {
       expect(res.body.shifts[1]).toMatchObject({ confirmedCount: 1, roleName: 'Sorting' });
     });
 
+    it("copies a day's shifts to another date at the same local times", async () => {
+      const role = await createRole(db, event.id);
+      for (const [start, end] of [
+        ['09:00', '12:00'],
+        ['20:00', '23:30'],
+      ]) {
+        await coordinator
+          .post(`/api/events/${event.id}/shifts`)
+          .send({
+            roleId: role.id,
+            date: '2026-03-07',
+            startTime: start,
+            endTime: end,
+            capacity: 3,
+          })
+          .expect(201);
+      }
+      // Chicago moves to daylight time on 2026-03-08, so the UTC times differ.
+      const res = await coordinator
+        .post(`/api/events/${event.id}/shifts/copy`)
+        .send({ fromDate: '2026-03-07', toDate: '2026-03-14' });
+      expect(res.status).toBe(201);
+      expect(res.body.shifts).toEqual([
+        expect.objectContaining({
+          date: '2026-03-14',
+          startTime: '09:00',
+          startsAt: '2026-03-14T14:00:00.000Z',
+        }),
+        expect.objectContaining({ date: '2026-03-14', startTime: '20:00', endTime: '23:30' }),
+      ]);
+      const empty = await coordinator
+        .post(`/api/events/${event.id}/shifts/copy`)
+        .send({ fromDate: '2026-03-01', toDate: '2026-03-02' });
+      expect(empty.status).toBe(400);
+    });
+
     it('deletes a shift', async () => {
       const role = await createRole(db, event.id);
       const shift = await createShift(db, {

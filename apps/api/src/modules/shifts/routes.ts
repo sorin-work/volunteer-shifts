@@ -112,6 +112,38 @@ export function shiftRoutes(ctx: AppContext): Router {
     res.status(201).json({ shift: toShiftDto(shift, event.timezone) });
   });
 
+  // Repeat a day's schedule on another date, e.g. next Saturday's food bank.
+  router.post('/events/:id/shifts/copy', requireCoordinator, async (req, res) => {
+    const event = await getEditableEvent(ctx.db, idParam(req.params.id, 'Event'));
+    const { fromDate, toDate } = validate(z.object({ fromDate: date, toDate: date }), req.body);
+    if (fromDate === toDate) throw badRequest('Pick a different date to copy to.');
+    const source = (
+      await ctx.db
+        .selectFrom('shifts')
+        .selectAll()
+        .where('event_id', '=', event.id)
+        .orderBy('starts_at')
+        .execute()
+    )
+      .map((s) => toShiftDto(s, event.timezone))
+      .filter((s) => s.date === fromDate);
+    if (!source.length) throw badRequest('There are no shifts on that date.');
+
+    const values = source.map((s) => {
+      const times = resolveShiftTimes({ ...s, date: toDate }, event.timezone);
+      return {
+        event_id: event.id,
+        role_id: s.roleId,
+        starts_at: times.startsAt,
+        ends_at: times.endsAt,
+        capacity: s.capacity,
+        notes: s.notes,
+      };
+    });
+    const created = await ctx.db.insertInto('shifts').values(values).returningAll().execute();
+    res.status(201).json({ shifts: created.map((s) => toShiftDto(s, event.timezone)) });
+  });
+
   router.patch('/shifts/:id', requireCoordinator, async (req, res) => {
     const shift = await getShift(idParam(req.params.id, 'Shift'));
     const event = await getEditableEvent(ctx.db, shift.event_id);
