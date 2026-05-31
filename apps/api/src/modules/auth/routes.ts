@@ -1,7 +1,8 @@
 import { Router, type Response } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
-import { conflict, unauthorized } from '../../lib/errors.js';
+import { conflict, HttpError, unauthorized } from '../../lib/errors.js';
+import { RateLimiter } from '../../lib/rate-limit.js';
 import { toPublicUser } from '../../lib/users.js';
 import { validate } from '../../lib/validate.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
@@ -29,6 +30,8 @@ const loginSchema = z.object({
 
 export function authRoutes(ctx: AppContext): Router {
   const router = Router();
+  // 10 failed sign-ins per address and IP every 15 minutes.
+  const loginLimiter = new RateLimiter(10, 15 * 60_000);
 
   async function startSession(res: Response, userId: number) {
     const { token } = await createSession(ctx.db, userId, ctx.config.SESSION_TTL_HOURS, ctx.now());
@@ -68,6 +71,12 @@ export function authRoutes(ctx: AppContext): Router {
 
   router.post('/login', async (req, res) => {
     const input = validate(loginSchema, req.body);
+    const key = `${req.ip}:${input.email.toLowerCase()}`;
+    const wait = loginLimiter.hit(key, ctx.now().getTime());
+    if (wait) {
+      res.set('Retry-After', String(wait));
+      throw new HttpError(429, 'too_many_attempts', 'Too many sign-in attempts. Try again later.');
+    }
     const user = await ctx.db
       .selectFrom('users')
       .selectAll()
@@ -76,6 +85,7 @@ export function authRoutes(ctx: AppContext): Router {
     if (!user || !(await verifyPassword(input.password, user.password_hash))) {
       throw unauthorized('Email or password is incorrect.');
     }
+    loginLimiter.reset(key);
     await startSession(res, user.id);
     res.json({ user: toPublicUser(user) });
   });

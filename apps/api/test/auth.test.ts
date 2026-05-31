@@ -90,6 +90,20 @@ describe('auth routes', () => {
     });
   });
 
+  it('slows down repeated failed sign-ins', async () => {
+    await createUser(db, { email: 'sam@example.org' });
+    for (let i = 0; i < 10; i++) {
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'sam@example.org', password: 'bad-guess' });
+    }
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'sam@example.org', password: TEST_PASSWORD });
+    expect(res.status).toBe(429);
+    expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+  });
+
   describe('session', () => {
     it('requires a session for /me', async () => {
       const res = await request(app).get('/api/auth/me');
