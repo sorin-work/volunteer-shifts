@@ -92,6 +92,22 @@ describe('signups', () => {
       ]);
     });
 
+    it('rejects a shift that starts while an earlier one is still running', async () => {
+      const morning = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+      const lunch = await shiftAt('2026-03-07T11:00:00Z', '2026-03-07T14:00:00Z');
+      await volunteer.post(`/api/shifts/${morning.id}/signups`).expect(201);
+      const res = await volunteer.post(`/api/shifts/${lunch.id}/signups`);
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('schedule_conflict');
+    });
+
+    it('rejects a shift inside a longer one', async () => {
+      const allDay = await shiftAt('2026-03-07T08:00:00Z', '2026-03-07T18:00:00Z');
+      const short = await shiftAt('2026-03-07T10:00:00Z', '2026-03-07T11:00:00Z');
+      await volunteer.post(`/api/shifts/${short.id}/signups`).expect(201);
+      expect((await volunteer.post(`/api/shifts/${allDay.id}/signups`)).status).toBe(409);
+    });
+
     it('allows back-to-back shifts', async () => {
       const first = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
       const second = await shiftAt('2026-03-07T12:00:00Z', '2026-03-07T15:00:00Z');

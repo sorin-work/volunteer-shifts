@@ -54,8 +54,9 @@ export async function findConflicts(
     ])
     .where('signups.user_id', '=', userId)
     .where('signups.status', 'in', ['confirmed', 'waitlisted'])
-    .where('shifts.starts_at', '>=', range.startsAt)
-    .where('shifts.starts_at', '<', range.endsAt);
+    // Two ranges overlap when each one starts before the other ends.
+    .where('shifts.starts_at', '<', range.endsAt)
+    .where('shifts.ends_at', '>', range.startsAt);
   if (range.excludeShiftId) query = query.where('shifts.id', '<>', range.excludeShiftId);
   return query.orderBy('shifts.starts_at').execute();
 }
