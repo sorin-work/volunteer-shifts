@@ -71,9 +71,14 @@ export function signupRoutes(ctx: AppContext): Router {
         ? query.where('shifts.ends_at', '>', ctx.now()).orderBy('shifts.starts_at', 'asc')
         : query.where('shifts.ends_at', '<=', ctx.now()).orderBy('shifts.starts_at', 'desc');
     const rows = await query.execute();
+    const positions = new Map<number, number | null>();
+    for (const r of rows) {
+      if (r.status === 'waitlisted') positions.set(r.id, await waitlistPosition(ctx, r));
+    }
     res.json({
       signups: rows.map((r) => ({
         ...toSignupDto(r),
+        waitlistPosition: positions.get(r.id) ?? null,
         shift: toShiftDto(
           {
             id: r.shift_id,

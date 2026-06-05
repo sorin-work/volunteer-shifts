@@ -13,6 +13,8 @@
       <div>
         <a href="/events/{signup.event.id}"><strong>{signup.event.name}</strong></a>
         <StatusBadge status={signup.status} />
+        {#if signup.waitlistPosition}<span class="muted">#{signup.waitlistPosition} in line</span
+          >{/if}
         <p class="muted">
           {signup.role.name} · {formatDate(signup.shift.date)} · {formatTimeRange(signup.shift)}
           {#if signup.event.location}· {signup.event.location}{/if}

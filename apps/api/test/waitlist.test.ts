@@ -54,6 +54,14 @@ describe('waitlist', () => {
     expect(cleo.signup.waitlistPosition).toBe(2);
   });
 
+  it('shows the waitlist position in my shifts', async () => {
+    await volunteer('ana');
+    await volunteer('ben');
+    const cleo = await volunteer('cleo');
+    const res = await cleo.agent.get('/api/me/signups');
+    expect(res.body.signups[0]).toMatchObject({ status: 'waitlisted', waitlistPosition: 2 });
+  });
+
   it('promotes a waitlisted volunteer when a confirmed one cancels', async () => {
     const ana = await volunteer('ana');
     const ben = await volunteer('ben');
