@@ -24,6 +24,34 @@
   line-height: 1.5;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141917;
+    --surface: #1d2421;
+    --text: #e6ebe8;
+    --muted: #9aa69f;
+    --border: #2f3a35;
+    --primary: #4cc597;
+    --primary-hover: #6ad3ab;
+    --primary-soft: #1f3a30;
+    --danger: #ff8a80;
+    --danger-soft: #3d2220;
+    --warning: #f2c46d;
+    --warning-soft: #3a3020;
+    --shadow: none;
+    color-scheme: dark;
+  }
+
+  button,
+  .button {
+    color: #0d1411;
+  }
+
+  .badge.muted {
+    background: #2a332f;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
