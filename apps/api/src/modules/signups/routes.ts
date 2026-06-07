@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { AppContext } from '../../context.js';
 import type { Signup } from '../../db/types.js';
-import { conflict, notFound } from '../../lib/errors.js';
+import { conflict, forbidden, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { sendSafely } from '../../mail/mailer.js';
 import { shiftMailInfo } from '../../mail/shift-info.js';
@@ -27,7 +27,20 @@ export function signupRoutes(ctx: AppContext): Router {
   const router = Router();
 
   router.post('/shifts/:id/signups', requireAuth, async (req, res) => {
-    const user = currentUser(req);
+    const me = currentUser(req);
+    // Coordinators can put someone else on a shift, e.g. after a phone call.
+    let user = me;
+    const forUserId = (req.body as { userId?: unknown } | undefined)?.userId;
+    if (forUserId !== undefined && forUserId !== me.id) {
+      if (me.role !== 'coordinator') throw forbidden('Only coordinators can sign up other people.');
+      const other = await ctx.db
+        .selectFrom('users')
+        .selectAll()
+        .where('id', '=', Number(forUserId) || 0)
+        .executeTakeFirst();
+      if (!other) throw notFound('Volunteer');
+      user = other;
+    }
     const { signup, shift } = await signUp(ctx, user, idParam(req.params.id, 'Shift'));
     const position = await waitlistPosition(ctx, signup);
     const info = shiftMailInfo(ctx, shift, user);

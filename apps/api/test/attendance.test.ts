@@ -75,6 +75,28 @@ describe('roster and attendance', () => {
       ]);
     });
 
+    it('lets a coordinator add a volunteer to the shift', async () => {
+      const vol = await db
+        .selectFrom('users')
+        .select('id')
+        .where('email', '=', 'vol@example.org')
+        .executeTakeFirstOrThrow();
+      const res = await coordinator.post(`/api/shifts/${shiftId}/signups`).send({ userId: vol.id });
+      expect(res.status).toBe(201);
+      expect(res.body.signup).toMatchObject({ userId: vol.id, status: 'confirmed' });
+      expect(ctx.mailer.to('vol@example.org')).toHaveLength(1);
+    });
+
+    it('does not let volunteers sign up other people', async () => {
+      const coord = await db
+        .selectFrom('users')
+        .select('id')
+        .where('email', '=', 'coord@example.org')
+        .executeTakeFirstOrThrow();
+      const res = await volunteer.post(`/api/shifts/${shiftId}/signups`).send({ userId: coord.id });
+      expect(res.status).toBe(403);
+    });
+
     it('is not available to volunteers', async () => {
       expect((await volunteer.get(`/api/shifts/${shiftId}/roster`)).status).toBe(403);
     });
