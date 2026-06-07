@@ -110,6 +110,17 @@ describe('skills and eligibility', () => {
       expect(res.body.error.code).toBe('too_young');
     });
 
+    it('rejects volunteers whose birthday is after the shift date', async () => {
+      // Turns 18 on 2026-04-15; the shift is on 2026-03-07.
+      const shift = await shiftForRole({ minAge: 18 });
+      await createUser(db, { email: 'almost@example.org', birth_date: '2008-04-15' });
+      const res = await (
+        await loginAs(app, 'almost@example.org')
+      ).post(`/api/shifts/${shift.id}/signups`);
+      expect(res.status).toBe(422);
+      expect(res.body.error.code).toBe('too_young');
+    });
+
     it('accepts volunteers who are old enough', async () => {
       const shift = await shiftForRole({ minAge: 18 });
       await createUser(db, { email: 'adult@example.org', birth_date: '1990-05-05' });
