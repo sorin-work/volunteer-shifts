@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
+  import AddToShift from '$lib/components/AddToShift.svelte';
   import { formatDate, formatDateTime, formatTimeRange } from '$lib/format';
   import type { Attendance, Roster, RosterEntry } from '$lib/types';
 
@@ -104,6 +105,10 @@
         </tbody>
       </table>
     {/if}
+  </section>
+
+  <section>
+    <AddToShift shiftId={roster.shift.id} onadded={load} />
   </section>
 
   {#if roster.waitlist.length}
