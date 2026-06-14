@@ -1,11 +1,11 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
+  import EventDescription from '$lib/components/EventDescription.svelte';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import { formatDate, formatTimeRange, groupByDate, spotsLabel } from '$lib/format';
   import { isCoordinator } from '$lib/session.svelte';
   import { describeSignupError } from '$lib/signup-errors';
-  import { formatDescription } from '$lib/text';
   import type { EventDetails, EventShift, Signup } from '$lib/types';
 
   let details = $state<EventDetails | null>(null);
@@ -90,10 +90,7 @@
     <p class="muted">
       {#if event.location}{event.location} ·{/if} Times are shown in {event.timezone}
     </p>
-    {#if event.description}
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      <p class="description">{@html formatDescription(event.description)}</p>
-    {/if}
+    {#if event.description}<EventDescription text={event.description} />{/if}
   </header>
 
   {#if notice}<p class="alert success" role="status">{notice}</p>{/if}
@@ -152,10 +149,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-
-  .description {
-    max-width: 65ch;
   }
 
   .day {

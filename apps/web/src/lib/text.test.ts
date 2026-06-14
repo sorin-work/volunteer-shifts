@@ -14,6 +14,18 @@ describe('formatDescription', () => {
     );
   });
 
+  it('escapes html so descriptions cannot inject markup', () => {
+    expect(formatDescription('<img src=x onerror="alert(1)">')).toBe(
+      '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;',
+    );
+    expect(formatDescription('Tea & biscuits')).toBe('Tea &amp; biscuits');
+  });
+
+  it('keeps quotes in links inside the attribute', () => {
+    const html = formatDescription('https://example.org/"onmouseover="alert(1)');
+    expect(html).not.toContain('"onmouseover="');
+  });
+
   it('leaves plain text alone', () => {
     expect(formatDescription('Sorting tins and dry goods')).toBe('Sorting tins and dry goods');
   });
