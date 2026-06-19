@@ -124,6 +124,15 @@ describe('events routes', () => {
     expect(pastList.body.events.map((e: { name: string }) => e.name)).toEqual(['Past']);
   });
 
+  it('searches events by name or location', async () => {
+    await createEvent({ name: 'Harvest Festival', location: 'Victoria Park' });
+    await createEvent({ name: 'Food bank', location: 'Riverside Hall' });
+    const byName = await coordinator.get('/api/events?search=harvest');
+    expect(byName.body.events.map((e: { name: string }) => e.name)).toEqual(['Harvest Festival']);
+    const byPlace = await coordinator.get('/api/events?search=riverside');
+    expect(byPlace.body.events.map((e: { name: string }) => e.name)).toEqual(['Food bank']);
+  });
+
   it('keeps new events without shifts in the upcoming list', async () => {
     await createEvent({ name: 'Brand new' });
     const res = await coordinator.get('/api/events');

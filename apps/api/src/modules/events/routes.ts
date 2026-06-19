@@ -56,6 +56,13 @@ export function eventRoutes(ctx: AppContext): Router {
     if (currentUser(req).role !== 'coordinator') {
       query = query.where('events.status', '=', 'published');
     }
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    if (search) {
+      const pattern = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      query = query.where((eb) =>
+        eb.or([eb('events.name', 'ilike', pattern), eb('events.location', 'ilike', pattern)]),
+      );
+    }
     const now = ctx.now();
     if (when === 'upcoming') {
       // Events still to come, plus drafts that have no shifts yet.
