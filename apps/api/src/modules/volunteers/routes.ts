@@ -4,6 +4,7 @@ import type { AppContext } from '../../context.js';
 import { badRequest, notFound } from '../../lib/errors.js';
 import { pageInfo, parsePage } from '../../lib/pagination.js';
 import { idParam } from '../../lib/params.js';
+import { containsPattern } from '../../lib/search.js';
 import { validate } from '../../lib/validate.js';
 import { toPublicUser } from '../../lib/users.js';
 import { requireAuth, requireCoordinator } from '../../middleware/auth.js';
@@ -29,7 +30,7 @@ export function volunteerRoutes(ctx: AppContext): Router {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     let base = ctx.db.selectFrom('users');
     if (search) {
-      const pattern = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      const pattern = containsPattern(search);
       base = base.where((eb) =>
         eb.or([eb('name', 'ilike', pattern), eb('email', 'ilike', pattern)]),
       );

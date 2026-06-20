@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import type { AppContext } from '../../context.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
+import { containsPattern } from '../../lib/search.js';
 import { validate } from '../../lib/validate.js';
 import { sendSafely } from '../../mail/mailer.js';
 import { shiftMailInfo } from '../../mail/shift-info.js';
@@ -58,7 +59,7 @@ export function eventRoutes(ctx: AppContext): Router {
     }
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     if (search) {
-      const pattern = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      const pattern = containsPattern(search);
       query = query.where((eb) =>
         eb.or([eb('events.name', 'ilike', pattern), eb('events.location', 'ilike', pattern)]),
       );
