@@ -7,6 +7,14 @@
   import type { EventSummary } from '$lib/types';
 
   const when = $derived(page.url.searchParams.get('when') === 'past' ? 'past' : 'upcoming');
+  let search = $state('');
+  let debounced = $state('');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  function onSearch() {
+    clearTimeout(timer);
+    timer = setTimeout(() => (debounced = search.trim()), 250);
+  }
 
   let events: EventSummary[] = $state([]);
   let loading = $state(true);
@@ -14,10 +22,11 @@
 
   $effect(() => {
     const current = when;
+    const q = debounced ? `&search=${encodeURIComponent(debounced)}` : '';
     loading = true;
     error = '';
     api
-      .get<{ events: EventSummary[] }>(`/events?when=${current}`)
+      .get<{ events: EventSummary[] }>(`/events?when=${current}${q}`)
       .then((res) => (events = res.events))
       .catch((err) => (error = err instanceof ApiError ? err.message : 'Could not load events.'))
       .finally(() => (loading = false));
@@ -31,10 +40,19 @@
   {#if isCoordinator()}<a class="button" href="/events/new">New event</a>{/if}
 </div>
 
-<nav class="tabs">
-  <a href="/events" aria-current={when === 'upcoming' ? 'page' : undefined}>Upcoming</a>
-  <a href="/events?when=past" aria-current={when === 'past' ? 'page' : undefined}>Past</a>
-</nav>
+<div class="toolbar">
+  <nav class="tabs">
+    <a href="/events" aria-current={when === 'upcoming' ? 'page' : undefined}>Upcoming</a>
+    <a href="/events?when=past" aria-current={when === 'past' ? 'page' : undefined}>Past</a>
+  </nav>
+  <input
+    type="search"
+    placeholder="Search events or places"
+    aria-label="Search events"
+    bind:value={search}
+    oninput={onSearch}
+  />
+</div>
 
 {#if loading}
   <p class="muted">Loading events…</p>
@@ -42,7 +60,7 @@
   <p class="alert">{error}</p>
 {:else if events.length === 0}
   <div class="card empty">
-    <p>No {when} events right now.</p>
+    <p>{debounced ? `No ${when} events match “${debounced}”.` : `No ${when} events right now.`}</p>
     {#if when === 'upcoming'}<p class="muted">
         New events will show up here once they're published.
       </p>{/if}
@@ -74,10 +92,22 @@
     align-items: center;
   }
 
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .toolbar input {
+    max-width: 280px;
+  }
+
   .tabs {
     display: flex;
     gap: 1rem;
-    margin: 0.5rem 0 1rem;
   }
 
   .tabs a {
