@@ -73,6 +73,19 @@ describe('waitlist', () => {
     ]);
   });
 
+  it('promotes whoever has waited longest', async () => {
+    const ana = await volunteer('ana');
+    const ben = await volunteer('ben');
+    const cleo = await volunteer('cleo');
+    const dan = await volunteer('dan');
+    await ana.agent.delete(`/api/signups/${ana.signup.id}`).expect(200);
+    expect(await statusOf(ben.signup.id)).toBe('confirmed');
+    expect(await statusOf(cleo.signup.id)).toBe('waitlisted');
+    expect(await statusOf(dan.signup.id)).toBe('waitlisted');
+    const res = await dan.agent.get('/api/me/signups');
+    expect(res.body.signups[0].waitlistPosition).toBe(2);
+  });
+
   it('does not promote anyone when a waitlisted volunteer leaves', async () => {
     await volunteer('ana');
     const ben = await volunteer('ben');

@@ -146,7 +146,8 @@ export async function promoteFromWaitlist(ctx: AppContext, shiftId: number) {
     .select('id')
     .where('shift_id', '=', shiftId)
     .where('status', '=', 'waitlisted')
-    .orderBy('created_at', 'desc')
+    .orderBy('created_at', 'asc')
+    .orderBy('id', 'asc')
     .limit(open)
     .execute();
   if (!next.length) return [];
