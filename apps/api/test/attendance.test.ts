@@ -56,7 +56,11 @@ describe('roster and attendance', () => {
       expect(res.body.confirmed).toEqual([
         expect.objectContaining({
           attendance: 'pending',
-          volunteer: expect.objectContaining({ name: 'Vera Volunteer', phone: '0700 000 111' }),
+          volunteer: expect.objectContaining({
+            name: 'Vera Volunteer',
+            phone: '0700 000 111',
+            recentNoShows: 0,
+          }),
         }),
       ]);
       expect(res.body.waitlist).toHaveLength(1);

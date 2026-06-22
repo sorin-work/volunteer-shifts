@@ -39,6 +39,15 @@ export function attendanceRoutes(ctx: AppContext): Router {
           'users.name',
           'users.email',
           'users.phone',
+          (eb) =>
+            eb
+              .selectFrom('signups as past')
+              .innerJoin('shifts as ps', 'ps.id', 'past.shift_id')
+              .select((sub) => sub.fn.countAll<number>().as('n'))
+              .whereRef('past.user_id', '=', 'users.id')
+              .where('past.attendance', '=', 'no_show')
+              .where('ps.starts_at', '>', new Date(ctx.now().getTime() - 365 * 86_400_000))
+              .as('recent_no_shows'),
         ])
         .where('signups.shift_id', '=', shift.id)
         .where('signups.status', '<>', 'cancelled')
@@ -59,7 +68,13 @@ export function attendanceRoutes(ctx: AppContext): Router {
       attendance: r.attendance,
       checkedInAt: r.checked_in_at?.toISOString() ?? null,
       signedUpAt: r.created_at.toISOString(),
-      volunteer: { id: r.user_id, name: r.name, email: r.email, phone: r.phone },
+      volunteer: {
+        id: r.user_id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        recentNoShows: Number(r.recent_no_shows ?? 0),
+      },
     });
 
     res.json({
