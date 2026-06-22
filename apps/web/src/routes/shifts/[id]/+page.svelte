@@ -67,7 +67,14 @@
         <tbody>
           {#each roster.confirmed as entry (entry.signupId)}
             <tr class={entry.attendance}>
-              <td><a href="/volunteers/{entry.volunteer.id}">{entry.volunteer.name}</a></td>
+              <td>
+                <a href="/volunteers/{entry.volunteer.id}">{entry.volunteer.name}</a>
+                {#if entry.volunteer.recentNoShows >= 2}
+                  <span class="badge warning" title="No-shows in the last 12 months">
+                    {entry.volunteer.recentNoShows} no-shows
+                  </span>
+                {/if}
+              </td>
               <td>
                 <a href="mailto:{entry.volunteer.email}">{entry.volunteer.email}</a>
                 {#if entry.volunteer.phone}<br /><span class="muted">{entry.volunteer.phone}</span

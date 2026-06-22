@@ -98,7 +98,13 @@ export interface RosterEntry {
   attendance: Attendance;
   checkedInAt: string | null;
   signedUpAt: string;
-  volunteer: { id: number; name: string; email: string; phone: string | null };
+  volunteer: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    recentNoShows: number;
+  };
 }
 
 export interface Roster {
