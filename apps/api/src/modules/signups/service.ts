@@ -63,6 +63,19 @@ export async function findConflicts(
 
 /** Signs the user up for a shift, checking everything a coordinator would. */
 export async function signUp(ctx: AppContext, user: User, shiftId: number) {
+  // Lock the shift row so two people can't both take the last spot: the
+  // second transaction waits here until the first has inserted its signup.
+  return ctx.db.transaction().execute(async (trx) => {
+    await lockShift(trx, shiftId);
+    return signUpLocked({ ...ctx, db: trx }, user, shiftId);
+  });
+}
+
+async function lockShift(db: AppContext['db'], shiftId: number) {
+  await db.selectFrom('shifts').select('id').where('id', '=', shiftId).forUpdate().execute();
+}
+
+async function signUpLocked(ctx: AppContext, user: User, shiftId: number) {
   const shift = await getShiftWithEvent(ctx, shiftId);
   if (shift.event_status === 'draft') throw notFound('Shift');
   if (shift.event_status === 'cancelled') {
@@ -133,6 +146,13 @@ export async function waitlistPosition(
  * Returns the signups that were promoted.
  */
 export async function promoteFromWaitlist(ctx: AppContext, shiftId: number) {
+  return ctx.db.transaction().execute(async (trx) => {
+    await lockShift(trx, shiftId);
+    return promoteLocked({ ...ctx, db: trx }, shiftId);
+  });
+}
+
+async function promoteLocked(ctx: AppContext, shiftId: number) {
   const shift = await ctx.db
     .selectFrom('shifts')
     .select(['id', 'capacity'])

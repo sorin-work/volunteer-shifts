@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../src/db/connection.js';
+import { signUp } from '../src/modules/signups/service.js';
 import { buildApp, buildContext, createUser, loginAs, type TestContext } from './app.js';
 import { createTestDatabase, resetDatabase } from './db.js';
 import { createEvent, createRole, createShift } from './fixtures.js';
@@ -84,6 +85,16 @@ describe('waitlist', () => {
     expect(await statusOf(dan.signup.id)).toBe('waitlisted');
     const res = await dan.agent.get('/api/me/signups');
     expect(res.body.signups[0].waitlistPosition).toBe(2);
+  });
+
+  it('never confirms more people than there are spots, even at the same moment', async () => {
+    const users = [];
+    for (const name of ['ana', 'ben', 'cleo', 'dan']) {
+      users.push(await createUser(db, { email: `${name}@example.org`, name }));
+    }
+    const results = await Promise.all(users.map((u) => signUp(ctx, u, shiftId)));
+    const statuses = results.map((r) => r.signup.status).sort();
+    expect(statuses).toEqual(['confirmed', 'waitlisted', 'waitlisted', 'waitlisted']);
   });
 
   it('does not promote anyone when a waitlisted volunteer leaves', async () => {
