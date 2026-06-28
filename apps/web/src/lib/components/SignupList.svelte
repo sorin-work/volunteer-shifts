@@ -19,6 +19,11 @@
           {signup.role.name} · {formatDate(signup.shift.date)} · {formatTimeRange(signup.shift)}
           {#if signup.event.location}· {signup.event.location}{/if}
         </p>
+        {#if new Date(signup.shift.startsAt) > new Date()}
+          <a class="calendar" href="/api/signups/{signup.id}/calendar.ics" download
+            >Add to calendar</a
+          >
+        {/if}
       </div>
       {#if actions}<div>{@render actions(signup)}</div>{/if}
     </li>
@@ -47,5 +52,9 @@
   a {
     text-decoration: none;
     margin-right: 0.4rem;
+  }
+
+  .calendar {
+    font-size: 0.85rem;
   }
 </style>
