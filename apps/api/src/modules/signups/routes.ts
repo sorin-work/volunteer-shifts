@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { AppContext } from '../../context.js';
 import type { Signup } from '../../db/types.js';
 import { conflict, forbidden, notFound } from '../../lib/errors.js';
+import { toIcs } from '../../lib/ics.js';
 import { idParam } from '../../lib/params.js';
 import { sendSafely } from '../../mail/mailer.js';
 import { shiftMailInfo } from '../../mail/shift-info.js';
@@ -115,6 +116,44 @@ export function signupRoutes(ctx: AppContext): Router {
         role: { id: r.role_id, name: r.role_name },
       })),
     });
+  });
+
+  router.get('/signups/:id/calendar.ics', requireAuth, async (req, res) => {
+    const user = currentUser(req);
+    const row = await ctx.db
+      .selectFrom('signups')
+      .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+      .innerJoin('events', 'events.id', 'shifts.event_id')
+      .innerJoin('roles', 'roles.id', 'shifts.role_id')
+      .select([
+        'signups.id',
+        'signups.user_id',
+        'shifts.starts_at',
+        'shifts.ends_at',
+        'shifts.notes',
+        'shifts.event_id',
+        'events.name as event_name',
+        'events.location',
+        'roles.name as role_name',
+      ])
+      .where('signups.id', '=', idParam(req.params.id, 'Signup'))
+      .where('signups.status', '<>', 'cancelled')
+      .executeTakeFirst();
+    if (!row || row.user_id !== user.id) throw notFound('Signup');
+    const ics = toIcs({
+      uid: `signup-${row.id}@volunteer-shifts`,
+      start: row.starts_at,
+      end: row.ends_at,
+      stamp: ctx.now(),
+      summary: `${row.event_name}: ${row.role_name}`,
+      location: row.location,
+      description: row.notes,
+      url: new URL(`/events/${row.event_id}`, ctx.config.APP_URL).toString(),
+    });
+    res
+      .type('text/calendar; charset=utf-8')
+      .set('Content-Disposition', `attachment; filename="shift-${row.id}.ics"`)
+      .send(ics);
   });
 
   router.delete('/signups/:id', requireAuth, async (req, res) => {

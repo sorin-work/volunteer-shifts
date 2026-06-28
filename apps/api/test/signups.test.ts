@@ -45,6 +45,18 @@ describe('signups', () => {
     expect(mail?.text).toContain('Sorting');
   });
 
+  it('offers a calendar file for your own signups only', async () => {
+    const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
+    const { body } = await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    const res = await volunteer.get(`/api/signups/${body.signup.id}/calendar.ics`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('text/calendar; charset=utf-8');
+    expect(res.text).toContain('SUMMARY:Food bank Saturday: Sorting');
+    await createUser(db, { email: 'other@example.org' });
+    const other = await loginAs(app, 'other@example.org');
+    expect((await other.get(`/api/signups/${body.signup.id}/calendar.ics`)).status).toBe(404);
+  });
+
   it('rejects signing up twice', async () => {
     const shift = await shiftAt('2026-03-07T09:00:00Z', '2026-03-07T12:00:00Z');
     await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
