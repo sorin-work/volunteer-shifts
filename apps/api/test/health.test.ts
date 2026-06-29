@@ -16,4 +16,11 @@ describe('GET /api/health', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
   });
+
+  it('reports the database being unreachable', async () => {
+    const broken = await createTestDatabase();
+    await broken.destroy();
+    const res = await request(buildApp(buildContext(broken))).get('/api/health');
+    expect(res.status).toBe(503);
+  });
 });

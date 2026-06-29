@@ -1,5 +1,6 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
+import { sql } from 'kysely';
 import { pinoHttp } from 'pino-http';
 import type { AppContext } from './context.js';
 import { loadSession } from './middleware/auth.js';
@@ -30,8 +31,14 @@ export function createApp(ctx: AppContext) {
   app.use(cookieParser());
   app.use(loadSession(ctx));
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok' });
+  app.get('/api/health', async (_req, res) => {
+    try {
+      await sql`select 1`.execute(ctx.db);
+      res.json({ status: 'ok' });
+    } catch (err) {
+      ctx.logger.error({ err }, 'health check failed');
+      res.status(503).json({ status: 'unavailable' });
+    }
   });
 
   app.use('/api/auth', authRoutes(ctx));
