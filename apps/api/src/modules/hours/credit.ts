@@ -1,4 +1,5 @@
 import type { AppContext } from '../../context.js';
+import { localDate } from '../../lib/time.js';
 import { durationHours } from '../shifts/schedule.js';
 
 interface CheckedInSignup {
@@ -7,6 +8,7 @@ interface CheckedInSignup {
   starts_at: Date;
   ends_at: Date;
   event_name: string;
+  event_timezone: string;
   role_name: string;
 }
 
@@ -21,7 +23,8 @@ export async function creditShiftHours(ctx: AppContext, signup: CheckedInSignup,
     .values({
       user_id: signup.user_id,
       signup_id: signup.id,
-      worked_on: signup.starts_at.toISOString().slice(0, 10),
+      // The day the volunteer worked, as the people on site saw it.
+      worked_on: localDate(signup.starts_at, signup.event_timezone),
       hours: creditedHours(signup.starts_at, signup.ends_at),
       description: `${signup.event_name}: ${signup.role_name}`,
       created_by: by,

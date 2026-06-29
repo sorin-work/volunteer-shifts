@@ -27,8 +27,8 @@ describe('hours', () => {
   });
   afterAll(() => db.destroy());
 
-  async function checkedInShift(startsAt: string, endsAt: string) {
-    const event = await createEvent(db, { name: 'Pantry' });
+  async function checkedInShift(startsAt: string, endsAt: string, timezone = 'UTC') {
+    const event = await createEvent(db, { name: 'Pantry', timezone });
     const role = await createRole(db, event.id, { name: 'Packing' });
     const shift = await createShift(db, { eventId: event.id, roleId: role.id, startsAt, endsAt });
     const { body } = await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
@@ -53,6 +53,15 @@ describe('hours', () => {
       }),
     ]);
     expect(res.body.totals).toEqual([{ year: 2026, hours: 3.5, entries: 1 }]);
+  });
+
+  it("counts hours on the event's local date, not the UTC date", async () => {
+    // New Year's Eve 18:00-23:00 in Chicago is already 1 January in UTC.
+    ctx.setNow('2025-12-20T09:00:00Z');
+    await checkedInShift('2026-01-01T00:00:00Z', '2026-01-01T05:00:00Z', 'America/Chicago');
+    const res = await volunteer.get(`/api/volunteers/${volunteerId}/hours`);
+    expect(res.body.entries[0].workedOn).toBe('2025-12-31');
+    expect(res.body.totals).toEqual([{ year: 2025, hours: 5, entries: 1 }]);
   });
 
   it('removes the hours when the check-in is undone', async () => {

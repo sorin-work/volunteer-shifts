@@ -134,6 +134,7 @@ export function attendanceRoutes(ctx: AppContext): Router {
         'shifts.starts_at',
         'shifts.ends_at',
         'events.name as event_name',
+        'events.timezone as event_timezone',
         'roles.name as role_name',
       ])
       .where('signups.id', '=', idParam(req.params.id, 'Signup'))
