@@ -17,6 +17,13 @@ describe('GET /api/health', () => {
     expect(res.body).toEqual({ status: 'ok' });
   });
 
+  it('sends security headers and disables caching', async () => {
+    const res = await request(buildApp(buildContext(db))).get('/api/health');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
   it('reports the database being unreachable', async () => {
     const broken = await createTestDatabase();
     await broken.destroy();

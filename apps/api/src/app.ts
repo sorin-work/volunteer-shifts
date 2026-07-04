@@ -27,6 +27,15 @@ export function createApp(ctx: AppContext) {
       autoLogging: { ignore: (req) => req.url === '/api/health' },
     }),
   );
+  app.use((_req, res, next) => {
+    res.set({
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'same-origin',
+      'Cache-Control': 'no-store',
+    });
+    next();
+  });
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
   app.use(loadSession(ctx));
