@@ -9,6 +9,7 @@ import { shiftMailInfo } from '../../mail/shift-info.js';
 import { templates } from '../../mail/templates.js';
 import { currentUser, requireAuth, requireCoordinator } from '../../middleware/auth.js';
 import { requiredSkillsByRole, toRoleDto } from '../roles/dto.js';
+import { eligibilityProblem } from '../signups/eligibility.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { toEventDto } from './dto.js';
 import { createEventSchema, updateEventSchema } from './schemas.js';
@@ -132,15 +133,34 @@ export function eventRoutes(ctx: AppContext): Router {
       ctx.db,
       roles.map((r) => r.id),
     );
-    const userId = currentUser(req).id;
+    const user = currentUser(req);
+    const userId = user.id;
+    const mySkills = new Set(
+      (
+        await ctx.db
+          .selectFrom('user_skills')
+          .select('skill_id')
+          .where('user_id', '=', userId)
+          .execute()
+      ).map((r) => r.skill_id),
+    );
+    const roleById = new Map(roles.map((r) => [r.id, r]));
     res.json({
       event: toEventDto(event),
       roles: roles.map((r) => toRoleDto(r, skills.get(r.id))),
       shifts: shifts.map((s) => {
         const forShift = signups.filter((x) => x.shift_id === s.id);
         const mine = forShift.find((x) => x.user_id === userId);
+        const dto = toShiftDto(s, event.timezone);
+        const role = roleById.get(s.role_id)!;
         return {
-          ...toShiftDto(s, event.timezone),
+          ...dto,
+          eligibility: eligibilityProblem(
+            user,
+            mySkills,
+            { ...role, requiredSkills: skills.get(role.id) ?? [] },
+            dto.date,
+          ),
           confirmedCount: forShift.filter((x) => x.status === 'confirmed').length,
           waitlistCount: forShift.filter((x) => x.status === 'waitlisted').length,
           mySignup: mine ? { id: mine.id, status: mine.status } : null,

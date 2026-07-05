@@ -130,6 +130,20 @@ describe('skills and eligibility', () => {
       expect(res.status).toBe(201);
     });
 
+    it('explains on the event page why a shift is out of reach', async () => {
+      await shiftForRole({ minAge: 18 });
+      await createUser(db, { email: 'teen@example.org', birth_date: '2012-01-20' });
+      const res = await (await loginAs(app, 'teen@example.org')).get(`/api/events/${event.id}`);
+      expect(res.body.shifts[0].eligibility).toEqual({
+        code: 'too_young',
+        message: 'Ages 18 and up.',
+      });
+      const adult = await createUser(db, { email: 'adult@example.org', birth_date: '1990-01-01' });
+      expect(adult).toBeDefined();
+      const ok = await (await loginAs(app, 'adult@example.org')).get(`/api/events/${event.id}`);
+      expect(ok.body.shifts[0].eligibility).toBeNull();
+    });
+
     it('lists the skills a volunteer is missing', async () => {
       const skills = await db
         .insertInto('skills')

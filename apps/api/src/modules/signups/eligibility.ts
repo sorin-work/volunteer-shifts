@@ -56,3 +56,33 @@ export async function assertEligible(ctx: AppContext, user: User, shift: ShiftFo
     );
   }
 }
+
+export interface EligibilityProblem {
+  code: 'birth_date_required' | 'too_young' | 'missing_skills';
+  message: string;
+}
+
+/**
+ * The same rules as assertEligible, computed from data already loaded, so the
+ * event page can explain up front why a shift can't be taken.
+ */
+export function eligibilityProblem(
+  user: Pick<User, 'birth_date'>,
+  userSkillIds: Set<number>,
+  role: { name: string; min_age: number | null; requiredSkills: { id: number; name: string }[] },
+  shiftDate: string,
+): EligibilityProblem | null {
+  if (role.min_age !== null) {
+    if (!user.birth_date) {
+      return { code: 'birth_date_required', message: 'Add your date of birth to sign up.' };
+    }
+    if (ageOn(user.birth_date, shiftDate) < role.min_age) {
+      return { code: 'too_young', message: `Ages ${role.min_age} and up.` };
+    }
+  }
+  const missing = role.requiredSkills.filter((s) => !userSkillIds.has(s.id));
+  if (missing.length) {
+    return { code: 'missing_skills', message: `Needs ${missing.map((s) => s.name).join(', ')}.` };
+  }
+  return null;
+}
