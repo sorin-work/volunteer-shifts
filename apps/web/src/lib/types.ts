@@ -58,6 +58,7 @@ export interface EventShift extends Shift {
   confirmedCount: number;
   waitlistCount: number;
   mySignup: { id: number; status: SignupStatus } | null;
+  eligibility: { code: string; message: string } | null;
 }
 
 export interface EventDetails {

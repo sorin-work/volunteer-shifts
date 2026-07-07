@@ -127,6 +127,11 @@
                   >
                     {shift.mySignup.status === 'waitlisted' ? 'Leave waitlist' : 'Cancel'}
                   </button>
+                {:else if shift.eligibility}
+                  <span class="muted ineligible">{shift.eligibility.message}</span>
+                  {#if shift.eligibility.code === 'birth_date_required'}
+                    <a href="/settings">Update profile</a>
+                  {/if}
                 {:else}
                   <button disabled={busy === shift.id} onclick={() => signUp(shift)}>
                     {shift.confirmedCount >= shift.capacity ? 'Join waitlist' : 'Sign up'}
@@ -177,6 +182,10 @@
   .shift-error {
     flex-basis: 100%;
     margin: 0;
+  }
+
+  .ineligible {
+    font-size: 0.9rem;
   }
 
   .notes {
