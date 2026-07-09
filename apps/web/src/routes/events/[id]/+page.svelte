@@ -5,6 +5,7 @@
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import { formatDate, formatTimeRange, groupByDate, spotsLabel } from '$lib/format';
   import { isCoordinator } from '$lib/session.svelte';
+  import { filterShifts } from '$lib/shift-filters';
   import { describeSignupError } from '$lib/signup-errors';
   import type { EventDetails, EventShift, Signup } from '$lib/types';
 
@@ -12,7 +13,11 @@
   let error = $state('');
 
   const roleById = $derived(new Map((details?.roles ?? []).map((r) => [r.id, r])));
-  const days = $derived(groupByDate<EventShift>(details?.shifts ?? []));
+  let roleFilter = $state<number | null>(null);
+  let openOnly = $state(false);
+  const days = $derived(
+    groupByDate<EventShift>(filterShifts(details?.shifts ?? [], { roleId: roleFilter, openOnly })),
+  );
 
   let busy = $state<number | null>(null);
   let shiftErrors: Record<number, string> = $state({});
@@ -95,8 +100,25 @@
 
   {#if notice}<p class="alert success" role="status">{notice}</p>{/if}
 
-  {#if days.length === 0}
+  {#if details.shifts.length > 0}
+    <div class="filters">
+      <label>
+        Role
+        <select bind:value={roleFilter}>
+          <option value={null}>All roles</option>
+          {#each details.roles as role (role.id)}<option value={role.id}>{role.name}</option>{/each}
+        </select>
+      </label>
+      <label class="check"
+        ><input type="checkbox" bind:checked={openOnly} /> Only shifts with space</label
+      >
+    </div>
+  {/if}
+
+  {#if details.shifts.length === 0}
     <div class="card"><p>No shifts have been added yet.</p></div>
+  {:else if days.length === 0}
+    <div class="card"><p>No shifts match these filters.</p></div>
   {/if}
 
   {#each days as day (day.date)}
@@ -154,6 +176,30 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-top: 1rem;
+  }
+
+  .filters select {
+    width: auto;
+    margin-left: 0.4rem;
+  }
+
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 400;
+  }
+
+  .check input {
+    width: auto;
   }
 
   .day {
