@@ -62,6 +62,27 @@ describe('shift reminders', () => {
     expect(await sendDueReminders(ctx)).toBe(0);
   });
 
+  it('does not remind people who are only on the waitlist', async () => {
+    const shift = await createShift(db, {
+      eventId: event.id,
+      roleId,
+      startsAt: '2026-03-03T08:00:00Z',
+      endsAt: '2026-03-03T11:00:00Z',
+      capacity: 1,
+    });
+    const app = buildApp(ctx);
+    await createUser(db, { email: 'first@example.org' });
+    await (await loginAs(app, 'first@example.org'))
+      .post(`/api/shifts/${shift.id}/signups`)
+      .expect(201);
+    await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    ctx.mailer.clear();
+
+    expect(await sendDueReminders(ctx)).toBe(1);
+    expect(ctx.mailer.to('first@example.org')).toHaveLength(1);
+    expect(ctx.mailer.to('vol@example.org')).toHaveLength(0);
+  });
+
   it('picks up later shifts as the clock moves', async () => {
     await signUpFor('2026-03-05T08:00:00Z', '2026-03-05T11:00:00Z');
     expect(await sendDueReminders(ctx)).toBe(0);

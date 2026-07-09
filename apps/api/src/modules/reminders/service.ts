@@ -30,7 +30,8 @@ export async function sendDueReminders(ctx: AppContext): Promise<number> {
       'users.name',
       'users.email',
     ])
-    .where('signups.status', '<>', 'cancelled')
+    // Waitlisted people aren't expected on site; they hear from us if promoted.
+    .where('signups.status', '=', 'confirmed')
     .where('signups.reminder_sent_at', 'is', null)
     .where('events.status', '=', 'published')
     .where('shifts.starts_at', '>', now)
