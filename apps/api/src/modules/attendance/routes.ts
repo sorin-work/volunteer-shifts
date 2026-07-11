@@ -9,7 +9,7 @@ import { currentUser, requireCoordinator } from '../../middleware/auth.js';
 import { creditShiftHours, removeShiftHours } from '../hours/credit.js';
 import { requiredSkillsByRole, toRoleDto } from '../roles/dto.js';
 import { toShiftDto } from '../shifts/dto.js';
-import { toSignupDto } from '../signups/routes.js';
+import { toSignupDto } from '../signups/dto.js';
 import { getShiftWithEvent } from '../signups/service.js';
 
 /** Volunteers can be checked in this long before their shift starts. */
