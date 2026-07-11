@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../src/db/connection.js';
-import { buildApp, buildContext, createUser, loginAs } from './app.js';
+import { buildApp, buildContext, createUser, loginAs, type TestContext } from './app.js';
 import { createTestDatabase, resetDatabase } from './db.js';
 import { createEvent, createRole, createShift } from './fixtures.js';
 
@@ -9,13 +9,15 @@ describe('roles and shifts', () => {
   let coordinator: Awaited<ReturnType<typeof loginAs>>;
   let volunteer: Awaited<ReturnType<typeof loginAs>>;
   let event: Awaited<ReturnType<typeof createEvent>>;
+  let ctx: TestContext;
 
   beforeAll(async () => {
     db = await createTestDatabase();
   });
   beforeEach(async () => {
     await resetDatabase(db);
-    const app = buildApp(buildContext(db));
+    ctx = buildContext(db);
+    const app = buildApp(ctx);
     await createUser(db, { email: 'coord@example.org', role: 'coordinator' });
     await createUser(db, { email: 'vol@example.org' });
     coordinator = await loginAs(app, 'coord@example.org');
@@ -235,7 +237,12 @@ describe('roles and shifts', () => {
         startsAt: '2026-03-07T15:00:00Z',
         endsAt: '2026-03-07T18:00:00Z',
       });
+      await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+      ctx.mailer.clear();
       expect((await coordinator.delete(`/api/shifts/${shift.id}`)).status).toBe(204);
+      expect(ctx.mailer.to('vol@example.org').map((m) => m.subject)).toEqual([
+        'Shift cancelled: Food bank Saturday',
+      ]);
       expect((await coordinator.delete(`/api/shifts/${shift.id}`)).status).toBe(404);
     });
   });

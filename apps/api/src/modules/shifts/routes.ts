@@ -7,7 +7,10 @@ import { isIsoDate, isTimeOfDay } from '../../lib/time.js';
 import { validate } from '../../lib/validate.js';
 import { requireCoordinator } from '../../middleware/auth.js';
 import { getEditableEvent } from '../events/queries.js';
-import { notifyPromoted, promoteFromWaitlist } from '../signups/service.js';
+import { sendSafely } from '../../mail/mailer.js';
+import { shiftMailInfo } from '../../mail/shift-info.js';
+import { templates } from '../../mail/templates.js';
+import { getShiftWithEvent, notifyPromoted, promoteFromWaitlist } from '../signups/service.js';
 import { toShiftDto } from './dto.js';
 import { durationHours, MAX_SHIFT_HOURS, resolveShiftTimes } from './schedule.js';
 
@@ -171,8 +174,26 @@ export function shiftRoutes(ctx: AppContext): Router {
 
   router.delete('/shifts/:id', requireCoordinator, async (req, res) => {
     const shift = await getShift(idParam(req.params.id, 'Shift'));
-    await getEditableEvent(ctx.db, shift.event_id);
+    const event = await getEditableEvent(ctx.db, shift.event_id);
+    const details = await getShiftWithEvent(ctx, shift.id);
+    const affected =
+      shift.starts_at > ctx.now() && event.status === 'published'
+        ? await ctx.db
+            .selectFrom('signups')
+            .innerJoin('users', 'users.id', 'signups.user_id')
+            .select(['users.name', 'users.email'])
+            .where('signups.shift_id', '=', shift.id)
+            .where('signups.status', '<>', 'cancelled')
+            .execute()
+        : [];
     await ctx.db.deleteFrom('shifts').where('id', '=', shift.id).execute();
+    for (const person of affected) {
+      await sendSafely(
+        ctx.mailer,
+        ctx.logger,
+        templates.shiftRemoved(person.email, shiftMailInfo(ctx, details, person)),
+      );
+    }
     res.status(204).end();
   });
 
