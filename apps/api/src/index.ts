@@ -3,7 +3,7 @@ import { loadConfig } from './config.js';
 import { createDatabase } from './db/connection.js';
 import { migrateToLatest } from './db/migrate.js';
 import { createLogger } from './lib/logger.js';
-import { createSmtpMailer, MemoryMailer } from './mail/mailer.js';
+import { createLogMailer, createSmtpMailer } from './mail/mailer.js';
 import { startReminderLoop } from './modules/reminders/scheduler.js';
 import { seedDemo } from './seed/demo.js';
 
@@ -18,7 +18,7 @@ if (config.SEED_DEMO && (await seedDemo(db))) {
 if (!config.SMTP_URL) logger.warn('SMTP_URL is not set, emails will not be delivered');
 const mailer = config.SMTP_URL
   ? createSmtpMailer(config.SMTP_URL, config.MAIL_FROM)
-  : new MemoryMailer();
+  : createLogMailer(logger);
 
 const ctx = { db, config, logger, mailer, now: () => new Date() };
 const app = createApp(ctx);

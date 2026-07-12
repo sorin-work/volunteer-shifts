@@ -22,7 +22,7 @@ export function createSmtpMailer(url: string, from: string): Mailer {
   };
 }
 
-/** Keeps messages in memory. Used by the tests and when no SMTP_URL is set. */
+/** Keeps messages in memory for the tests. */
 export class MemoryMailer implements Mailer {
   readonly sent: MailMessage[] = [];
 
@@ -37,6 +37,19 @@ export class MemoryMailer implements Mailer {
   clear() {
     this.sent.length = 0;
   }
+}
+
+/** Writes a summary of each email to the log; the default without SMTP_URL. */
+export function createLogMailer(logger: Logger): Mailer {
+  return {
+    async send(message) {
+      logger.info(
+        { to: message.to, subject: message.subject },
+        'email (not sent, SMTP_URL is not set)',
+      );
+      logger.debug({ text: message.text }, 'email body');
+    },
+  };
 }
 
 /** Email is best effort: a failed send is logged and never fails the request. */
