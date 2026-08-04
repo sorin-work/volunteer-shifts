@@ -20,6 +20,6 @@ export function pageInfo(req: PageRequest, total: number) {
     page: req.page,
     pageSize: req.pageSize,
     total,
-    totalPages: Math.floor(total / req.pageSize),
+    totalPages: Math.ceil(total / req.pageSize),
   };
 }

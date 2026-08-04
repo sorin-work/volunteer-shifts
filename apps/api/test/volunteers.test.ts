@@ -42,6 +42,13 @@ describe('volunteer directory', () => {
     ]);
   });
 
+  it('reaches the last, partly filled page', async () => {
+    const res = await coordinator.get('/api/volunteers?pageSize=3');
+    expect(res.body).toMatchObject({ total: 4, totalPages: 2 });
+    const last = await coordinator.get('/api/volunteers?pageSize=3&page=2');
+    expect(last.body.volunteers.map((v: { name: string }) => v.name)).toEqual(['Grace Hopper']);
+  });
+
   it('searches by name or email, case-insensitively', async () => {
     const byName = await coordinator.get('/api/volunteers?search=hopper');
     expect(byName.body.volunteers.map((v: { name: string }) => v.name)).toEqual(['Grace Hopper']);

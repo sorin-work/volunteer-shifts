@@ -23,4 +23,10 @@ describe('pageInfo', () => {
       totalPages: 4,
     });
   });
+
+  it('counts a partly filled last page', () => {
+    expect(pageInfo({ page: 1, pageSize: 20, offset: 0 }, 27).totalPages).toBe(2);
+    expect(pageInfo({ page: 1, pageSize: 20, offset: 0 }, 5).totalPages).toBe(1);
+    expect(pageInfo({ page: 1, pageSize: 20, offset: 0 }, 0).totalPages).toBe(0);
+  });
 });
