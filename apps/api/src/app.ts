@@ -11,6 +11,7 @@ import { certificateRoutes } from './modules/certificates/routes.js';
 import { eventRoutes } from './modules/events/routes.js';
 import { hoursRoutes } from './modules/hours/routes.js';
 import { profileRoutes } from './modules/profile/routes.js';
+import { reportRoutes } from './modules/reports/routes.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { shiftRoutes } from './modules/shifts/routes.js';
 import { signupRoutes } from './modules/signups/routes.js';
@@ -55,6 +56,7 @@ export function createApp(ctx: AppContext) {
   app.use('/api/events', eventRoutes(ctx));
   app.use('/api/skills', skillRoutes(ctx));
   app.use('/api/volunteers', volunteerRoutes(ctx));
+  app.use('/api/reports', reportRoutes(ctx));
   app.use('/api', roleRoutes(ctx));
   app.use('/api', shiftRoutes(ctx));
   app.use('/api', signupRoutes(ctx));
