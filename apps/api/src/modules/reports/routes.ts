@@ -1,5 +1,6 @@
 import { Router, type Request } from 'express';
 import type { AppContext } from '../../context.js';
+import { toCsv } from '../../lib/csv.js';
 import { badRequest } from '../../lib/errors.js';
 import { requireCoordinator } from '../../middleware/auth.js';
 
@@ -59,6 +60,18 @@ export function reportRoutes(ctx: AppContext): Router {
 
   router.get('/hours', requireCoordinator, async (req, res) => {
     res.json(await hoursReport(ctx, reportYear(ctx, req)));
+  });
+
+  router.get('/hours.csv', requireCoordinator, async (req, res) => {
+    const report = await hoursReport(ctx, reportYear(ctx, req));
+    const csv = toCsv(
+      ['Name', 'Email', 'Hours', 'Shifts'],
+      report.volunteers.map((v) => [v.name, v.email, v.hours.toFixed(2), v.shifts]),
+    );
+    res
+      .type('text/csv; charset=utf-8')
+      .set('Content-Disposition', `attachment; filename="volunteer-hours-${report.year}.csv"`)
+      .send(csv);
   });
 
   return router;

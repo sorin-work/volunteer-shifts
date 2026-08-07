@@ -49,6 +49,14 @@ describe('hours report', () => {
     expect((await coordinator.get('/api/reports/hours?year=abc')).status).toBe(400);
   });
 
+  it('downloads the report as csv', async () => {
+    const res = await coordinator.get('/api/reports/hours.csv?year=2026');
+    expect(res.headers['content-disposition']).toContain('volunteer-hours-2026.csv');
+    expect(res.text).toBe(
+      'Name,Email,Hours,Shifts\r\nBen,ben@example.org,5.00,0\r\nAna,ana@example.org,3.25,0\r\n',
+    );
+  });
+
   it('is coordinator-only', async () => {
     const ana = await loginAs(app, 'ana@example.org');
     expect((await ana.get('/api/reports/hours')).status).toBe(403);
