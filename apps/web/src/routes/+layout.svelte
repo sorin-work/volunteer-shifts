@@ -50,6 +50,7 @@
         {#if session.user.role === 'coordinator'}
           <a href="/volunteers">Volunteers</a>
           <a href="/skills">Skills</a>
+          <a href="/reports">Reports</a>
         {/if}
         <span class="spacer"></span>
         <a class="user" href="/settings">{session.user.name}</a>
