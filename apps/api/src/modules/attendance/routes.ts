@@ -15,6 +15,9 @@ import { getShiftWithEvent } from '../signups/service.js';
 /** Volunteers can be checked in this long before their shift starts. */
 export const EARLY_CHECK_IN_MINUTES = 60;
 
+/** Cancelling within this many hours of the start counts as late. */
+export const LATE_CANCELLATION_HOURS = 24;
+
 const attendanceSchema = z.object({
   attendance: z.enum(['present', 'no_show', 'pending']),
 });
@@ -77,7 +80,25 @@ export function attendanceRoutes(ctx: AppContext): Router {
       },
     });
 
+    // Cancellations in the last 24 hours before the start are worth knowing
+    // about when planning cover.
+    const lateCutoff = new Date(shift.starts_at.getTime() - LATE_CANCELLATION_HOURS * 3_600_000);
+    const late = await ctx.db
+      .selectFrom('signups')
+      .innerJoin('users', 'users.id', 'signups.user_id')
+      .select(['signups.id', 'signups.cancelled_at', 'users.id as user_id', 'users.name'])
+      .where('signups.shift_id', '=', shift.id)
+      .where('signups.status', '=', 'cancelled')
+      .where('signups.cancelled_at', '>=', lateCutoff)
+      .orderBy('signups.cancelled_at', 'desc')
+      .execute();
+
     res.json({
+      lateCancellations: late.map((l) => ({
+        signupId: l.id,
+        cancelledAt: l.cancelled_at!.toISOString(),
+        volunteer: { id: l.user_id, name: l.name },
+      })),
       shift: toShiftDto(shift, shift.event_timezone),
       event: { id: shift.event_id, name: shift.event_name, timezone: shift.event_timezone },
       role: toRoleDto(role, skills.get(role.id)),

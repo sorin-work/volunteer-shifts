@@ -101,6 +101,19 @@ describe('roster and attendance', () => {
       expect(res.status).toBe(403);
     });
 
+    it('lists late cancellations', async () => {
+      const id = await signUp();
+      ctx.setNow('2026-03-06T20:00:00Z');
+      await volunteer.delete(`/api/signups/${id}`).expect(200);
+      const res = await coordinator.get(`/api/shifts/${shiftId}/roster`);
+      expect(res.body.lateCancellations).toEqual([
+        expect.objectContaining({
+          cancelledAt: '2026-03-06T20:00:00.000Z',
+          volunteer: expect.objectContaining({ name: 'Vera Volunteer' }),
+        }),
+      ]);
+    });
+
     it('is not available to volunteers', async () => {
       expect((await volunteer.get(`/api/shifts/${shiftId}/roster`)).status).toBe(403);
     });
