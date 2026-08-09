@@ -114,6 +114,22 @@
     {/if}
   </section>
 
+  {#if roster.lateCancellations.length}
+    <section>
+      <h2>Late cancellations</h2>
+      <ul class="card late">
+        {#each roster.lateCancellations as late (late.signupId)}
+          <li>
+            <a href="/volunteers/{late.volunteer.id}">{late.volunteer.name}</a>
+            <span class="muted"
+              >cancelled {formatDateTime(late.cancelledAt, roster.event.timezone)}</span
+            >
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
+
   <section>
     <AddToShift shiftId={roster.shift.id} onadded={load} />
   </section>
@@ -174,5 +190,9 @@
 
   ol {
     padding-left: 2rem;
+  }
+
+  .late {
+    list-style: none;
   }
 </style>

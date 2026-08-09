@@ -109,6 +109,11 @@ export interface RosterEntry {
 }
 
 export interface Roster {
+  lateCancellations: {
+    signupId: number;
+    cancelledAt: string;
+    volunteer: { id: number; name: string };
+  }[];
   shift: Shift;
   event: { id: number; name: string; timezone: string };
   role: EventRole;
