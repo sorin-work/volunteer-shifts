@@ -57,6 +57,24 @@ describe('auth routes', () => {
       expect(res.body.error.code).toBe('email_taken');
     });
 
+    it('treats emails case-insensitively', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ name: 'Ana', email: ' Ana.Silva@Example.org ', password: 'long-enough' });
+      expect(res.status).toBe(201);
+      expect(res.body.user.email).toBe('ana.silva@example.org');
+
+      const duplicate = await request(app)
+        .post('/api/auth/register')
+        .send({ name: 'Ana 2', email: 'ana.silva@example.org', password: 'long-enough' });
+      expect(duplicate.status).toBe(409);
+
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'ANA.SILVA@example.org', password: 'long-enough' });
+      expect(login.status).toBe(200);
+    });
+
     it('never lets people register as coordinators', async () => {
       const res = await request(app)
         .post('/api/auth/register')

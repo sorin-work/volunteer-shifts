@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
+import { normalizeEmail } from '../../lib/email.js';
 import { conflict, HttpError, unauthorized } from '../../lib/errors.js';
 import { RateLimiter } from '../../lib/rate-limit.js';
 import { toPublicUser } from '../../lib/users.js';
@@ -14,7 +15,7 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-
 
 const registerSchema = z.object({
   name: z.string().trim().min(1, 'Name is required.').max(120),
-  email: z.string().trim().email('Enter a valid email address.').max(254),
+  email: z.string().trim().email('Enter a valid email address.').max(254).transform(normalizeEmail),
   password: z
     .string()
     .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters.`)
@@ -24,7 +25,7 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().min(1),
+  email: z.string().trim().min(1).transform(normalizeEmail),
   password: z.string().min(1),
 });
 
@@ -49,7 +50,7 @@ export function authRoutes(ctx: AppContext): Router {
     const existing = await ctx.db
       .selectFrom('users')
       .select('id')
-      .where('email', '=', input.email)
+      .where((eb) => eb(eb.fn('lower', ['email']), '=', input.email))
       .executeTakeFirst();
     if (existing) throw conflict('email_taken', 'An account with this email already exists.');
 
@@ -71,7 +72,7 @@ export function authRoutes(ctx: AppContext): Router {
 
   router.post('/login', async (req, res) => {
     const input = validate(loginSchema, req.body);
-    const key = `${req.ip}:${input.email.toLowerCase()}`;
+    const key = `${req.ip}:${input.email}`;
     const wait = loginLimiter.hit(key, ctx.now().getTime());
     if (wait) {
       res.set('Retry-After', String(wait));
@@ -80,7 +81,7 @@ export function authRoutes(ctx: AppContext): Router {
     const user = await ctx.db
       .selectFrom('users')
       .selectAll()
-      .where('email', '=', input.email)
+      .where((eb) => eb(eb.fn('lower', ['email']), '=', input.email))
       .executeTakeFirst();
     if (!user || !(await verifyPassword(input.password, user.password_hash))) {
       throw unauthorized('Email or password is incorrect.');
