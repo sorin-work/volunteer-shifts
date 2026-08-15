@@ -88,6 +88,31 @@ describe('volunteer directory', () => {
     expect(own.status).toBe(200);
   });
 
+  it('lets coordinators make someone a coordinator', async () => {
+    const ada = await db
+      .selectFrom('users')
+      .select('id')
+      .where('email', '=', 'ada@example.org')
+      .executeTakeFirstOrThrow();
+    const res = await coordinator
+      .put(`/api/volunteers/${ada.id}/role`)
+      .send({ role: 'coordinator' });
+    expect(res.status).toBe(200);
+    expect(res.body.volunteer.role).toBe('coordinator');
+    const adaAgent = await loginAs(app, 'ada@example.org');
+    expect((await adaAgent.get('/api/volunteers')).status).toBe(200);
+  });
+
+  it('does not let coordinators demote themselves', async () => {
+    const me = await db
+      .selectFrom('users')
+      .select('id')
+      .where('email', '=', 'coord@example.org')
+      .executeTakeFirstOrThrow();
+    const res = await coordinator.put(`/api/volunteers/${me.id}/role`).send({ role: 'volunteer' });
+    expect(res.status).toBe(409);
+  });
+
   it('is coordinator-only', async () => {
     const agent = await loginAs(app, 'ada@example.org');
     expect((await agent.get('/api/volunteers')).status).toBe(403);

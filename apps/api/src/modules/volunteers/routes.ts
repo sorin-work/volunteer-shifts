@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
-import { badRequest, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { pageInfo, parsePage } from '../../lib/pagination.js';
 import { idParam } from '../../lib/params.js';
 import { containsPattern } from '../../lib/search.js';
 import { validate } from '../../lib/validate.js';
 import { toPublicUser } from '../../lib/users.js';
-import { requireAuth, requireCoordinator } from '../../middleware/auth.js';
+import { currentUser, requireAuth, requireCoordinator } from '../../middleware/auth.js';
 import { assertCanViewVolunteer } from '../hours/routes.js';
 
 const skillsSchema = z.object({ skillIds: z.array(z.number().int().positive()).max(50) });
@@ -115,6 +115,22 @@ export function volunteerRoutes(ctx: AppContext): Router {
         totalHours: Math.round(Number(hours.total) * 100) / 100,
       },
     });
+  });
+
+  router.put('/:id/role', requireCoordinator, async (req, res) => {
+    const userId = idParam(req.params.id, 'Volunteer');
+    const { role } = validate(z.object({ role: z.enum(['coordinator', 'volunteer']) }), req.body);
+    if (userId === currentUser(req).id && role !== 'coordinator') {
+      throw conflict('cannot_demote_self', 'Ask another coordinator to change your own role.');
+    }
+    const updated = await ctx.db
+      .updateTable('users')
+      .set({ role })
+      .where('id', '=', userId)
+      .returningAll()
+      .executeTakeFirst();
+    if (!updated) throw notFound('Volunteer');
+    res.json({ volunteer: toPublicUser(updated) });
   });
 
   // Skills are confirmed by coordinators (e.g. after checking a food hygiene
