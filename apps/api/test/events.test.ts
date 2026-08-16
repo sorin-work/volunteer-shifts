@@ -161,6 +161,33 @@ describe('events routes', () => {
     ]);
   });
 
+  it('duplicates an event as a draft with roles and shifts moved by some days', async () => {
+    const event = await createEvent({ name: 'Harvest Festival 2026' });
+    const role = await createRole(db, event.id, { name: 'Gate', minAge: 16 });
+    await createShift(db, {
+      eventId: event.id,
+      roleId: role.id,
+      startsAt: '2026-06-06T09:00:00Z',
+      endsAt: '2026-06-06T13:00:00Z',
+      capacity: 6,
+    });
+    const res = await coordinator
+      .post(`/api/events/${event.id}/duplicate`)
+      .send({ name: 'Harvest Festival 2027', shiftDays: 364 });
+    expect(res.status).toBe(201);
+    expect(res.body.event).toMatchObject({ name: 'Harvest Festival 2027', status: 'draft' });
+    const details = await coordinator.get(`/api/events/${res.body.event.id}`);
+    expect(details.body.roles).toEqual([expect.objectContaining({ name: 'Gate', minAge: 16 })]);
+    expect(details.body.shifts).toEqual([
+      expect.objectContaining({
+        date: '2027-06-05',
+        startTime: '10:00',
+        capacity: 6,
+        confirmedCount: 0,
+      }),
+    ]);
+  });
+
   it('returns 404 for unknown or malformed ids', async () => {
     expect((await coordinator.get('/api/events/999')).status).toBe(404);
     expect((await coordinator.get('/api/events/abc')).status).toBe(404);

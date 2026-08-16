@@ -1,7 +1,9 @@
 import { Router, type Request } from 'express';
+import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
+import { addDays } from '../../lib/time.js';
 import { containsPattern } from '../../lib/search.js';
 import { validate } from '../../lib/validate.js';
 import { sendSafely } from '../../mail/mailer.js';
@@ -11,6 +13,7 @@ import { currentUser, requireAuth, requireCoordinator } from '../../middleware/a
 import { requiredSkillsByRole, toRoleDto } from '../roles/dto.js';
 import { eligibilityProblem } from '../signups/eligibility.js';
 import { toShiftDto } from '../shifts/dto.js';
+import { resolveShiftTimes } from '../shifts/schedule.js';
 import { toEventDto } from './dto.js';
 import { createEventSchema, updateEventSchema } from './schemas.js';
 
@@ -182,6 +185,92 @@ export function eventRoutes(ctx: AppContext): Router {
       .returningAll()
       .executeTakeFirstOrThrow();
     res.json({ event: toEventDto(updated) });
+  });
+
+  // Plan next year's festival from this one: copies details, roles and
+  // shifts moved by a number of days, as a new draft.
+  router.post('/:id/duplicate', requireCoordinator, async (req, res) => {
+    const source = await findVisibleEvent(req);
+    const input = validate(
+      z.object({
+        name: z.string().trim().min(1).max(160).optional(),
+        shiftDays: z.number().int().min(-3650).max(3650).default(0),
+      }),
+      req.body ?? {},
+    );
+    const copy = await ctx.db.transaction().execute(async (trx) => {
+      const event = await trx
+        .insertInto('events')
+        .values({
+          name: input.name ?? `${source.name} (copy)`,
+          description: source.description,
+          location: source.location,
+          timezone: source.timezone,
+          created_by: currentUser(req).id,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      const roles = await trx
+        .selectFrom('roles')
+        .selectAll()
+        .where('event_id', '=', source.id)
+        .execute();
+      const roleMap = new Map<number, number>();
+      for (const role of roles) {
+        const created = await trx
+          .insertInto('roles')
+          .values({
+            event_id: event.id,
+            name: role.name,
+            description: role.description,
+            min_age: role.min_age,
+          })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+        roleMap.set(role.id, created.id);
+        const skills = await trx
+          .selectFrom('role_skills')
+          .select('skill_id')
+          .where('role_id', '=', role.id)
+          .execute();
+        if (skills.length) {
+          await trx
+            .insertInto('role_skills')
+            .values(skills.map((s) => ({ role_id: created.id, skill_id: s.skill_id })))
+            .execute();
+        }
+      }
+      const shifts = await trx
+        .selectFrom('shifts')
+        .selectAll()
+        .where('event_id', '=', source.id)
+        .execute();
+      if (shifts.length) {
+        await trx
+          .insertInto('shifts')
+          .values(
+            shifts.map((s) => {
+              // Keep local wall-clock times even across DST changes.
+              const local = toShiftDto(s, source.timezone);
+              const times = resolveShiftTimes(
+                { ...local, date: addDays(local.date, input.shiftDays) },
+                source.timezone,
+              );
+              return {
+                event_id: event.id,
+                role_id: roleMap.get(s.role_id)!,
+                starts_at: times.startsAt,
+                ends_at: times.endsAt,
+                capacity: s.capacity,
+                notes: s.notes,
+              };
+            }),
+          )
+          .execute();
+      }
+      return event;
+    });
+    res.status(201).json({ event: toEventDto(copy) });
   });
 
   router.post('/:id/publish', requireCoordinator, async (req, res) => {
