@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../src/db/connection.js';
+import { markAttendance } from '../src/modules/attendance/service.js';
 import { buildApp, buildContext, createUser, loginAs, type TestContext } from './app.js';
 import { createTestDatabase, resetDatabase } from './db.js';
 import { createEvent, createRole, createShift } from './fixtures.js';
@@ -62,6 +63,30 @@ describe('hours', () => {
     const res = await volunteer.get(`/api/volunteers/${volunteerId}/hours`);
     expect(res.body.entries[0].workedOn).toBe('2025-12-31');
     expect(res.body.totals).toEqual([{ year: 2025, hours: 5, entries: 1 }]);
+  });
+
+  it('credits hours once when check-in is pressed twice at the same time', async () => {
+    const event = await createEvent(db, { name: 'Pantry' });
+    const role = await createRole(db, event.id, { name: 'Packing' });
+    const shift = await createShift(db, {
+      eventId: event.id,
+      roleId: role.id,
+      startsAt: '2026-03-07T09:00:00Z',
+      endsAt: '2026-03-07T12:00:00Z',
+    });
+    const { body } = await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    ctx.setNow('2026-03-07T09:00:00Z');
+    const coord = await db
+      .selectFrom('users')
+      .select('id')
+      .where('email', '=', 'coord@example.org')
+      .executeTakeFirstOrThrow();
+    await Promise.all([
+      markAttendance(ctx, body.signup.id, 'present', coord.id),
+      markAttendance(ctx, body.signup.id, 'present', coord.id),
+    ]);
+    const entries = await db.selectFrom('hour_entries').selectAll().execute();
+    expect(entries).toHaveLength(1);
   });
 
   it('removes the hours when the check-in is undone', async () => {
