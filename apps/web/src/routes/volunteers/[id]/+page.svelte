@@ -4,6 +4,7 @@
   import AddHoursForm from '$lib/components/AddHoursForm.svelte';
   import HoursLogView from '$lib/components/HoursLog.svelte';
   import { formatHours } from '$lib/format';
+  import { session } from '$lib/session.svelte';
   import type { HoursLog, SkillRef, VolunteerProfile } from '$lib/types';
 
   let profile = $state<VolunteerProfile | null>(null);
@@ -40,6 +41,20 @@
     }
   }
 
+  async function setRole(role: 'coordinator' | 'volunteer') {
+    const question =
+      role === 'coordinator'
+        ? 'Make this person a coordinator? They will be able to manage events and see contact details.'
+        : 'Make this person a regular volunteer again?';
+    if (!confirm(question)) return;
+    try {
+      await api.put(`/volunteers/${page.params.id}/role`, { role });
+      await load();
+    } catch (err) {
+      error = err instanceof ApiError ? err.message : 'Could not change the role.';
+    }
+  }
+
   async function saveSkills() {
     skillsSaved = false;
     try {
@@ -63,7 +78,21 @@
 
 {#if profile}
   {@const v = profile.volunteer}
-  <h1>{v.name}</h1>
+  <div class="title">
+    <h1>
+      {v.name}
+      {#if v.role === 'coordinator'}<span class="badge">coordinator</span>{/if}
+    </h1>
+    {#if v.id !== session.user?.id}
+      {#if v.role === 'coordinator'}
+        <button class="secondary" onclick={() => setRole('volunteer')}
+          >Remove coordinator role</button
+        >
+      {:else}
+        <button class="secondary" onclick={() => setRole('coordinator')}>Make coordinator</button>
+      {/if}
+    {/if}
+  </div>
   <p class="muted">
     <a href="mailto:{v.email}">{v.email}</a>
     {#if v.phone}· {v.phone}{/if}
@@ -125,6 +154,14 @@
 {/if}
 
 <style>
+  .title {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
   .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
