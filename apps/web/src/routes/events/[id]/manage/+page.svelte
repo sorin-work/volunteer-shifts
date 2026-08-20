@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
   import EventForm, { type EventFormValues } from '$lib/components/EventForm.svelte';
@@ -46,6 +47,28 @@
     }
   }
 
+  async function duplicate() {
+    const weeks = prompt('Copy this event and move its shifts forward by how many weeks?', '52');
+    if (weeks === null) return;
+    const n = Number(weeks);
+    if (!Number.isInteger(n)) {
+      error = 'Enter a whole number of weeks.';
+      return;
+    }
+    try {
+      const { event } = await api.post<{ event: VolunteerEvent }>(
+        `/events/${page.params.id}/duplicate`,
+        {
+          shiftDays: n * 7,
+        },
+      );
+      await goto(`/events/${event.id}/manage`);
+      await load();
+    } catch (err) {
+      error = err instanceof ApiError ? err.message : 'Could not duplicate the event.';
+    }
+  }
+
   $effect(() => {
     load();
   });
@@ -63,6 +86,7 @@
       {#if event.status === 'draft'}
         <button onclick={() => setStatus('publish')}>Publish</button>
       {/if}
+      <button class="secondary" onclick={duplicate}>Duplicate</button>
       {#if event.status !== 'cancelled'}
         <button class="secondary" onclick={() => setStatus('cancel')}>Cancel event</button>
       {/if}
