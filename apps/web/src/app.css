@@ -205,3 +205,29 @@ button.danger {
     background: #2a332f;
   }
 }
+
+/* Rosters and reports get printed for the sign-in desk. */
+@media print {
+  .topbar,
+  button,
+  .button,
+  .no-print {
+    display: none !important;
+  }
+
+  body,
+  :root {
+    background: #fff;
+    color: #000;
+  }
+
+  .card {
+    box-shadow: none;
+    border-color: #999;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

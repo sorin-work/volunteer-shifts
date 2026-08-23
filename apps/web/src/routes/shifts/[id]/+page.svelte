@@ -130,7 +130,7 @@
     </section>
   {/if}
 
-  <section>
+  <section class="no-print">
     <AddToShift shiftId={roster.shift.id} onadded={load} />
   </section>
 
@@ -149,6 +149,11 @@
 {/if}
 
 <style>
+  .title-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
   .title {
     display: flex;
     justify-content: space-between;
