@@ -24,6 +24,16 @@ describe('GET /api/health', () => {
     expect(res.headers['cache-control']).toBe('no-store');
   });
 
+  it('tags every response with a request id', async () => {
+    const app = buildApp(buildContext(db));
+    const fresh = await request(app).get('/api/health');
+    expect(fresh.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+    const passed = await request(app).get('/api/health').set('X-Request-Id', 'proxy-1234abcd');
+    expect(passed.headers['x-request-id']).toBe('proxy-1234abcd');
+    const junk = await request(app).get('/api/health').set('X-Request-Id', '<script>');
+    expect(junk.headers['x-request-id']).not.toBe('<script>');
+  });
+
   it('reports the database being unreachable', async () => {
     const broken = await createTestDatabase();
     await broken.destroy();

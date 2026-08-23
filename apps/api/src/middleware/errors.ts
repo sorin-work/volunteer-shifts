@@ -35,5 +35,11 @@ export const createErrorHandler =
       return;
     }
     logger.error({ err, method: req.method, url: req.originalUrl }, 'unhandled error');
-    res.status(500).json({ error: { code: 'internal', message: 'Something went wrong.' } });
+    res.status(500).json({
+      error: {
+        code: 'internal',
+        message: 'Something went wrong.',
+        requestId: String(req.id ?? ''),
+      },
+    });
   };

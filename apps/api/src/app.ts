@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import { sql } from 'kysely';
@@ -25,6 +26,14 @@ export function createApp(ctx: AppContext) {
   app.use(
     pinoHttp({
       logger: ctx.logger,
+      // Reuse an id from the proxy when it looks sane, otherwise make one.
+      genReqId: (req, res) => {
+        const incoming = req.headers['x-request-id'];
+        const id =
+          typeof incoming === 'string' && /^[\w-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+        res.setHeader('X-Request-Id', id);
+        return id;
+      },
       autoLogging: { ignore: (req) => req.url === '/api/health' },
     }),
   );
