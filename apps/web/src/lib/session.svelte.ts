@@ -1,4 +1,4 @@
-import { api, ApiError } from './api';
+import { api, ApiError, onUnauthorized } from './api';
 import type { User } from './types';
 
 interface SessionState {
@@ -7,6 +7,12 @@ interface SessionState {
 }
 
 export const session: SessionState = $state({ user: null, loaded: false });
+
+// The cookie expired or was revoked (e.g. password changed elsewhere): drop
+// the user so the layout sends them to the sign-in page.
+onUnauthorized(() => {
+  session.user = null;
+});
 
 /** Loads the signed-in user once; a 401 just means nobody is signed in. */
 export async function loadSession(): Promise<User | null> {

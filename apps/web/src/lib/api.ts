@@ -21,6 +21,13 @@ export class ApiError extends Error {
   }
 }
 
+let unauthorizedHandler: (() => void) | null = null;
+
+/** Called whenever the API says the session is gone (except for /auth calls). */
+export function onUnauthorized(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface RequestOptions {
@@ -58,6 +65,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
   }
   if (!res.ok) {
+    if (res.status === 401 && !path.startsWith('/auth/')) unauthorizedHandler?.();
     const err = (data as { error?: ApiErrorBody } | undefined)?.error;
     throw new ApiError(
       res.status,

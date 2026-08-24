@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, request } from './api';
+import { ApiError, onUnauthorized, request } from './api';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -54,6 +54,17 @@ describe('request', () => {
     const err = await failure(request('/events', { fetch }));
     expect(err).toBeInstanceOf(ApiError);
     expect(err.message).toBe('Request failed (502).');
+  });
+
+  it('signals an expired session, but not for auth endpoints', async () => {
+    const handler = vi.fn();
+    onUnauthorized(handler);
+    const fetch = vi.fn(async () => json(401, { error: { code: 'unauthorized', message: 'x' } }));
+    await failure(request('/me/signups', { fetch }));
+    expect(handler).toHaveBeenCalledTimes(1);
+    await failure(request('/auth/login', { method: 'POST', body: {}, fetch }));
+    expect(handler).toHaveBeenCalledTimes(1);
+    onUnauthorized(null);
   });
 
   it('reports network failures', async () => {
