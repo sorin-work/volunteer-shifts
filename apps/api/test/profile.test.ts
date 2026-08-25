@@ -39,6 +39,23 @@ describe('profile', () => {
     expect(res.body.error.details.fields.birthDate).toBeDefined();
   });
 
+  it('deletes the account after confirming the password', async () => {
+    expect((await agent.delete('/api/me/profile').send({ password: 'wrong' })).status).toBe(400);
+    expect((await agent.delete('/api/me/profile').send({ password: TEST_PASSWORD })).status).toBe(
+      204,
+    );
+    expect(await db.selectFrom('users').select('id').execute()).toHaveLength(0);
+    expect((await agent.get('/api/auth/me')).status).toBe(401);
+  });
+
+  it('keeps at least one coordinator', async () => {
+    await createUser(db, { email: 'boss@example.org', role: 'coordinator' });
+    const boss = await loginAs(app, 'boss@example.org');
+    const res = await boss.delete('/api/me/profile').send({ password: TEST_PASSWORD });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('last_coordinator');
+  });
+
   it('changes the password after checking the current one', async () => {
     const wrong = await agent
       .post('/api/me/profile/password')

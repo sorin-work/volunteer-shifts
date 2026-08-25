@@ -7,7 +7,7 @@ import { toPublicUser } from '../../lib/users.js';
 import { validate } from '../../lib/validate.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from '../auth/passwords.js';
-import { hashToken } from '../auth/sessions.js';
+import { hashToken, SESSION_COOKIE } from '../auth/sessions.js';
 
 const profileSchema = z
   .object({
@@ -68,6 +68,31 @@ export function profileRoutes(ctx: AppContext): Router {
       .where('user_id', '=', user.id)
       .where('id', '<>', hashToken(req.sessionToken ?? ''))
       .execute();
+    res.status(204).end();
+  });
+
+  // Volunteers can leave: the account and its history are removed. Hours and
+  // sign-ups go with it, so coordinators should export reports first.
+  router.delete('/', async (req, res) => {
+    const user = currentUser(req);
+    const { password } = validate(z.object({ password: z.string().min(1) }), req.body);
+    if (!(await verifyPassword(password, user.password_hash))) {
+      throw new HttpError(400, 'validation_error', 'Some fields are invalid.', {
+        fields: { password: 'That is not your password.' },
+      });
+    }
+    if (user.role === 'coordinator') {
+      const { n } = await ctx.db
+        .selectFrom('users')
+        .select((eb) => eb.fn.countAll<number>().as('n'))
+        .where('role', '=', 'coordinator')
+        .executeTakeFirstOrThrow();
+      if (Number(n) <= 1) {
+        throw new HttpError(409, 'last_coordinator', 'Make someone else a coordinator first.');
+      }
+    }
+    await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
+    res.clearCookie(SESSION_COOKIE, { path: '/' });
     res.status(204).end();
   });
 
