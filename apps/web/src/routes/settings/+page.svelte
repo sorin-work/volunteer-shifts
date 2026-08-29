@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { api, ApiError } from '$lib/api';
   import { session } from '$lib/session.svelte';
   import type { User } from '$lib/types';
@@ -32,6 +33,22 @@
         profileFields = err.fields;
         if (!Object.keys(profileFields).length) profileMessage = err.message;
       }
+    }
+  }
+
+  let deletePassword = $state('');
+  let deleteError = $state('');
+
+  async function deleteAccount(event: SubmitEvent) {
+    event.preventDefault();
+    deleteError = '';
+    if (!confirm('Delete your account and your hours history? This cannot be undone.')) return;
+    try {
+      await api.delete('/me/profile', { body: { password: deletePassword } });
+      session.user = null;
+      await goto('/login', { replaceState: true });
+    } catch (err) {
+      if (err instanceof ApiError) deleteError = err.fields.password ?? err.message;
     }
   }
 
@@ -108,9 +125,32 @@
     {#if passwordMessage}<p class="muted" role="status">{passwordMessage}</p>{/if}
     <p><button type="submit">Change password</button></p>
   </form>
+
+  <form class="card danger-zone" onsubmit={deleteAccount} novalidate>
+    <h2>Delete account</h2>
+    <p class="muted">
+      This removes your profile, sign-ups and logged hours. Download your certificates first if you
+      need them.
+    </p>
+    <div class="field">
+      <label for="delete-password">Password</label>
+      <input
+        id="delete-password"
+        type="password"
+        autocomplete="current-password"
+        bind:value={deletePassword}
+      />
+    </div>
+    {#if deleteError}<p class="field-error">{deleteError}</p>{/if}
+    <p><button type="submit" class="danger">Delete my account</button></p>
+  </form>
 </div>
 
 <style>
+  .danger-zone {
+    border-color: var(--danger);
+  }
+
   .columns {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
