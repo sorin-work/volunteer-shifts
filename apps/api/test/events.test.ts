@@ -188,6 +188,38 @@ describe('events routes', () => {
     ]);
   });
 
+  it('summarises turnout for an event', async () => {
+    const event = await createEvent();
+    const role = await createRole(db, event.id);
+    const shift = await createShift(db, {
+      eventId: event.id,
+      roleId: role.id,
+      startsAt: '2026-02-20T09:00:00Z',
+      endsAt: '2026-02-20T12:00:00Z',
+    });
+    const users = await Promise.all(
+      [1, 2, 3].map((i) => createUser(db, { email: `t${i}@example.org` })),
+    );
+    await db
+      .insertInto('signups')
+      .values([
+        { shift_id: shift.id, user_id: users[0]!.id, status: 'confirmed', attendance: 'present' },
+        { shift_id: shift.id, user_id: users[1]!.id, status: 'confirmed', attendance: 'no_show' },
+        { shift_id: shift.id, user_id: users[2]!.id, status: 'cancelled' },
+      ])
+      .execute();
+    const res = await coordinator.get(`/api/events/${event.id}/summary`);
+    expect(res.body.summary).toEqual({
+      confirmed: 2,
+      waitlisted: 0,
+      cancelled: 1,
+      present: 1,
+      noShows: 1,
+      turnout: 50,
+      hours: 0,
+    });
+  });
+
   it('returns 404 for unknown or malformed ids', async () => {
     expect((await coordinator.get('/api/events/999')).status).toBe(404);
     expect((await coordinator.get('/api/events/abc')).status).toBe(404);

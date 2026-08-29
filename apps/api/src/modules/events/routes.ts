@@ -172,6 +172,43 @@ export function eventRoutes(ctx: AppContext): Router {
     });
   });
 
+  /** Turnout for an event: how many came, didn't show, and hours given. */
+  router.get('/:id/summary', requireCoordinator, async (req, res) => {
+    const event = await findVisibleEvent(req);
+    const rows = await ctx.db
+      .selectFrom('signups')
+      .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+      .select(['signups.status', 'signups.attendance', (eb) => eb.fn.countAll<number>().as('n')])
+      .where('shifts.event_id', '=', event.id)
+      .groupBy(['signups.status', 'signups.attendance'])
+      .execute();
+    const hours = await ctx.db
+      .selectFrom('hour_entries')
+      .innerJoin('signups', 'signups.id', 'hour_entries.signup_id')
+      .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+      .select((eb) =>
+        eb.fn.coalesce(eb.fn.sum<number>('hour_entries.hours'), eb.lit(0)).as('total'),
+      )
+      .where('shifts.event_id', '=', event.id)
+      .executeTakeFirstOrThrow();
+    const count = (pred: (r: (typeof rows)[number]) => boolean) =>
+      rows.filter(pred).reduce((sum, r) => sum + Number(r.n), 0);
+    const present = count((r) => r.status === 'confirmed' && r.attendance === 'present');
+    const noShows = count((r) => r.status === 'confirmed' && r.attendance === 'no_show');
+    res.json({
+      summary: {
+        confirmed: count((r) => r.status === 'confirmed'),
+        waitlisted: count((r) => r.status === 'waitlisted'),
+        cancelled: count((r) => r.status === 'cancelled'),
+        present,
+        noShows,
+        // Of the shifts where attendance was taken, how many people turned up.
+        turnout: present + noShows ? Math.round((present / (present + noShows)) * 100) : null,
+        hours: Math.round(Number(hours.total) * 100) / 100,
+      },
+    });
+  });
+
   router.patch('/:id', requireCoordinator, async (req, res) => {
     const event = await findVisibleEvent(req);
     const input = validate(updateEventSchema, req.body);
