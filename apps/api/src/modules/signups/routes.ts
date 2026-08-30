@@ -9,7 +9,13 @@ import { templates } from '../../mail/templates.js';
 import { toShiftDto } from '../shifts/dto.js';
 import { currentUser, requireAuth } from '../../middleware/auth.js';
 import { toSignupDto } from './dto.js';
-import { notifyPromoted, promoteFromWaitlist, signUp, waitlistPosition } from './service.js';
+import {
+  notifyPromoted,
+  promoteFromWaitlist,
+  signUp,
+  waitlistPosition,
+  waitlistPositions,
+} from './service.js';
 
 export function signupRoutes(ctx: AppContext): Router {
   const router = Router();
@@ -72,10 +78,10 @@ export function signupRoutes(ctx: AppContext): Router {
         ? query.where('shifts.ends_at', '>', ctx.now()).orderBy('shifts.starts_at', 'asc')
         : query.where('shifts.ends_at', '<=', ctx.now()).orderBy('shifts.starts_at', 'desc');
     const rows = await query.execute();
-    const positions = new Map<number, number | null>();
-    for (const r of rows) {
-      if (r.status === 'waitlisted') positions.set(r.id, await waitlistPosition(ctx, r));
-    }
+    const positions = await waitlistPositions(
+      ctx,
+      rows.filter((r) => r.status === 'waitlisted').map((r) => r.shift_id),
+    );
     res.json({
       signups: rows.map((r) => ({
         ...toSignupDto(r),

@@ -141,6 +141,27 @@ export async function waitlistPosition(
   return Number(ahead) + 1;
 }
 
+/** Waitlist positions for every waitlisted signup on the given shifts, by signup id. */
+export async function waitlistPositions(
+  ctx: AppContext,
+  shiftIds: number[],
+): Promise<Map<number, number>> {
+  if (!shiftIds.length) return new Map();
+  const rows = await ctx.db
+    .selectFrom('signups')
+    .select((eb) => [
+      'id',
+      eb.fn
+        .agg<number>('row_number')
+        .over((ob) => ob.partitionBy('shift_id').orderBy('created_at').orderBy('id'))
+        .as('position'),
+    ])
+    .where('shift_id', 'in', [...new Set(shiftIds)])
+    .where('status', '=', 'waitlisted')
+    .execute();
+  return new Map(rows.map((r) => [r.id, Number(r.position)]));
+}
+
 /**
  * Fills open spots on a shift from its waitlist, first come first served.
  * Returns the signups that were promoted.
