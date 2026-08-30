@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
   import EventForm, { type EventFormValues } from '$lib/components/EventForm.svelte';
+  import EventSummary from '$lib/components/EventSummary.svelte';
   import RolesEditor from '$lib/components/RolesEditor.svelte';
   import ShiftsEditor from '$lib/components/ShiftsEditor.svelte';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
@@ -92,6 +93,8 @@
       {/if}
     </div>
   </div>
+
+  <EventSummary eventId={event.id} />
 
   {#if event.status !== 'cancelled'}
     <section>
