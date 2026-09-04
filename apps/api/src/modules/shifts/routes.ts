@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
-import { badRequest, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { idParam } from '../../lib/params.js';
 import { isIsoDate, isTimeOfDay } from '../../lib/time.js';
 import { validate } from '../../lib/validate.js';
@@ -10,7 +10,12 @@ import { getEditableEvent } from '../events/queries.js';
 import { sendSafely } from '../../mail/mailer.js';
 import { shiftMailInfo } from '../../mail/shift-info.js';
 import { templates } from '../../mail/templates.js';
-import { getShiftWithEvent, notifyPromoted, promoteFromWaitlist } from '../signups/service.js';
+import {
+  countConfirmed,
+  getShiftWithEvent,
+  notifyPromoted,
+  promoteFromWaitlist,
+} from '../signups/service.js';
 import { toShiftDto } from './dto.js';
 import { durationHours, MAX_SHIFT_HOURS, resolveShiftTimes } from './schedule.js';
 
@@ -153,6 +158,15 @@ export function shiftRoutes(ctx: AppContext): Router {
     const current = toShiftDto(shift, event.timezone);
     const input = validate(shiftSchema, { ...current, ...req.body });
     if (input.roleId !== shift.role_id) await assertRoleInEvent(input.roleId, event.id);
+    if (input.capacity < shift.capacity) {
+      const confirmed = await countConfirmed(ctx, shift.id);
+      if (input.capacity < confirmed) {
+        throw conflict(
+          'capacity_below_signups',
+          `${confirmed} people are already confirmed. Remove some before lowering the capacity.`,
+        );
+      }
+    }
     const { startsAt, endsAt } = checkedTimes(input, event.timezone);
     const updated = await ctx.db
       .updateTable('shifts')

@@ -114,6 +114,18 @@ describe('waitlist', () => {
     expect(await statusOf(ben.signup.id)).toBe('confirmed');
   });
 
+  it('refuses to lower capacity below the confirmed count', async () => {
+    await createUser(db, { email: 'coord@example.org', role: 'coordinator' });
+    const coord = await loginAs(app, 'coord@example.org');
+    await coord.patch(`/api/shifts/${shiftId}`).send({ capacity: 3 }).expect(200);
+    await volunteer('ana');
+    await volunteer('ben');
+    const res = await coord.patch(`/api/shifts/${shiftId}`).send({ capacity: 1 });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('capacity_below_signups');
+    expect((await coord.patch(`/api/shifts/${shiftId}`).send({ capacity: 2 })).status).toBe(200);
+  });
+
   it('shows the waitlist size on the event page', async () => {
     await volunteer('ana');
     const ben = await volunteer('ben');
