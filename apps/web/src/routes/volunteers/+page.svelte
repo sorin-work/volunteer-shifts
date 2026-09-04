@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
   import Pager from '$lib/components/Pager.svelte';
+  import { plural } from '$lib/format';
   import type { Paged, VolunteerListItem } from '$lib/types';
 
   const current = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
@@ -54,7 +55,7 @@
 {#if error}<p class="alert">{error}</p>{/if}
 
 {#if result}
-  <p class="muted">{result.total} {result.total === 1 ? 'person' : 'people'}</p>
+  <p class="muted">{plural(result.total, 'person', 'people')}</p>
   {#if result.volunteers.length === 0}
     <div class="card"><p>Nobody matches “{search}”.</p></div>
   {:else}

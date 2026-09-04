@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatDate, formatHours } from '$lib/format';
+  import { formatDate, formatHours, plural } from '$lib/format';
   import type { HoursLog } from '$lib/types';
   import type { Snippet } from 'svelte';
 
@@ -22,7 +22,7 @@
       <div class="card total">
         <span class="muted">{total.year}</span>
         <strong>{formatHours(total.hours)}</strong>
-        <span class="muted">{total.entries} entr{total.entries === 1 ? 'y' : 'ies'}</span>
+        <span class="muted">{plural(total.entries, 'entry', 'entries')}</span>
         <a href={certificateUrl(total.year)} download>Certificate (PDF)</a>
       </div>
     {/each}

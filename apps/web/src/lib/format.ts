@@ -62,3 +62,8 @@ export function spotsLabel(
   if (left > 0) return `${left} of ${shift.capacity} spots left`;
   return shift.waitlistCount > 0 ? `Full · ${shift.waitlistCount} on waitlist` : 'Full';
 }
+
+/** "1 shift", "3 shifts", "2 people". */
+export function plural(count: number, one: string, many = `${one}s`): string {
+  return `${count} ${count === 1 ? one : many}`;
+}

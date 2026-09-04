@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import { formatDateTime } from '$lib/format';
+  import { formatDateTime, plural } from '$lib/format';
   import { isCoordinator } from '$lib/session.svelte';
   import type { EventSummary } from '$lib/types';
 
@@ -74,7 +74,7 @@
         <p class="muted">
           {#if event.firstShiftAt}
             {formatDateTime(event.firstShiftAt, event.timezone)}
-            · {event.shiftCount} shift{event.shiftCount === 1 ? '' : 's'}
+            · {plural(event.shiftCount, 'shift')}
           {:else}
             No shifts yet
           {/if}

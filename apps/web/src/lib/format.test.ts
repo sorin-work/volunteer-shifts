@@ -6,6 +6,7 @@ import {
   formatTimeRange,
   groupByDate,
   shiftHours,
+  plural,
   spotsLabel,
 } from './format';
 
@@ -66,5 +67,13 @@ describe('spotsLabel', () => {
     expect(spotsLabel({ capacity: 2, confirmedCount: 2, waitlistCount: 4 })).toBe(
       'Full · 4 on waitlist',
     );
+  });
+});
+
+describe('plural', () => {
+  it('picks the right word', () => {
+    expect(plural(1, 'shift')).toBe('1 shift');
+    expect(plural(0, 'shift')).toBe('0 shifts');
+    expect(plural(2, 'person', 'people')).toBe('2 people');
   });
 });
