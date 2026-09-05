@@ -72,7 +72,9 @@ describe('shift reminders', () => {
     });
     const app = buildApp(ctx);
     await createUser(db, { email: 'first@example.org' });
-    await (await loginAs(app, 'first@example.org'))
+    await (
+      await loginAs(app, 'first@example.org')
+    )
       .post(`/api/shifts/${shift.id}/signups`)
       .expect(201);
     await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
