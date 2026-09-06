@@ -104,6 +104,12 @@ export interface HourEntriesTable {
   created_at: Timestamp;
 }
 
+export interface JobRunsTable {
+  name: string;
+  run_on: DateString;
+  created_at: Timestamp;
+}
+
 export interface DB {
   users: UsersTable;
   sessions: SessionsTable;
@@ -115,6 +121,7 @@ export interface DB {
   user_skills: UserSkillsTable;
   role_skills: RoleSkillsTable;
   hour_entries: HourEntriesTable;
+  job_runs: JobRunsTable;
 }
 
 export type User = Selectable<UsersTable>;
