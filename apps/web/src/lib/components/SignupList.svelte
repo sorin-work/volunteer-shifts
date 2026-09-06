@@ -1,6 +1,6 @@
 <script lang="ts">
   import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import { formatDate, formatTimeRange } from '$lib/format';
+  import { formatDate, formatTimeRange, todayIn } from '$lib/format';
   import type { MySignup } from '$lib/types';
   import type { Snippet } from 'svelte';
 
@@ -9,9 +9,11 @@
 
 <ul class="signups">
   {#each signups as signup (signup.id)}
-    <li class="card">
+    {@const today = signup.shift.date === todayIn(signup.event.timezone)}
+    <li class="card" class:today>
       <div>
         <a href="/events/{signup.event.id}"><strong>{signup.event.name}</strong></a>
+        {#if today}<span class="badge">Today</span>{/if}
         <StatusBadge status={signup.status} />
         {#if signup.waitlistPosition}<span class="muted">#{signup.waitlistPosition} in line</span
           >{/if}
@@ -52,6 +54,10 @@
   a {
     text-decoration: none;
     margin-right: 0.4rem;
+  }
+
+  .today {
+    border-left: 4px solid var(--primary);
   }
 
   .calendar {

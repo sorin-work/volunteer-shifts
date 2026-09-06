@@ -67,3 +67,8 @@ export function spotsLabel(
 export function plural(count: number, one: string, many = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
 }
+
+/** Today's date (YYYY-MM-DD) in a time zone, for "today" badges. */
+export function todayIn(timeZone: string, now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
+}

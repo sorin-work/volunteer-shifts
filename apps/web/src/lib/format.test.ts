@@ -7,6 +7,7 @@ import {
   groupByDate,
   shiftHours,
   plural,
+  todayIn,
   spotsLabel,
 } from './format';
 
@@ -75,5 +76,13 @@ describe('plural', () => {
     expect(plural(1, 'shift')).toBe('1 shift');
     expect(plural(0, 'shift')).toBe('0 shifts');
     expect(plural(2, 'person', 'people')).toBe('2 people');
+  });
+});
+
+describe('todayIn', () => {
+  it('uses the calendar day of the zone', () => {
+    const now = new Date('2026-09-06T03:00:00Z');
+    expect(todayIn('Europe/London', now)).toBe('2026-09-06');
+    expect(todayIn('America/Chicago', now)).toBe('2026-09-05');
   });
 });
