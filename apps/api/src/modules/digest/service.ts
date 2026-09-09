@@ -69,7 +69,10 @@ export async function sendCoordinatorDigest(ctx: AppContext): Promise<number> {
   for (const c of coordinators) {
     await sendSafely(ctx.mailer, ctx.logger, {
       to: c.email,
-      subject: `${shifts.length} shift${shifts.length === 1 ? '' : 's'} still need volunteers`,
+      subject:
+        shifts.length === 1
+          ? '1 shift still needs volunteers'
+          : `${shifts.length} shifts still need volunteers`,
       text: [
         `Hi ${c.name},`,
         '',

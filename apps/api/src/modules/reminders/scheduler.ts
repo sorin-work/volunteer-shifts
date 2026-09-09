@@ -1,7 +1,11 @@
 import type { AppContext } from '../../context.js';
+import { sendCoordinatorDigest } from '../digest/service.js';
 import { sendDueReminders } from './service.js';
 
-/** Runs the reminder job every REMINDER_INTERVAL_MINUTES; 0 turns it off. */
+/**
+ * Runs the reminder job (and the once-a-day coordinator digest) every
+ * REMINDER_INTERVAL_MINUTES; 0 turns it off.
+ */
 export function startReminderLoop(ctx: AppContext): () => void {
   const minutes = ctx.config.REMINDER_INTERVAL_MINUTES;
   if (minutes <= 0) return () => {};
@@ -14,6 +18,8 @@ export function startReminderLoop(ctx: AppContext): () => void {
     try {
       const sent = await sendDueReminders(ctx);
       if (sent) ctx.logger.info({ sent }, 'sent shift reminders');
+      const digests = await sendCoordinatorDigest(ctx);
+      if (digests) ctx.logger.info({ digests }, 'sent coordinator digest');
     } catch (err) {
       ctx.logger.error({ err }, 'reminder job failed');
     } finally {
