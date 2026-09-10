@@ -33,6 +33,8 @@
   }
 </script>
 
+<a class="skip-link" href="#main">Skip to content</a>
+
 {#if session.user}
   <header class="topbar">
     <nav class="container nav">
@@ -58,11 +60,11 @@
       </div>
     </nav>
   </header>
-  <main class="container">
+  <main id="main" class="container" tabindex="-1">
     {@render children()}
   </main>
 {:else if isPublic}
-  <main class="container narrow">
+  <main id="main" class="container narrow" tabindex="-1">
     {@render children()}
   </main>
 {:else}
