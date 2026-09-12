@@ -124,6 +124,16 @@ describe('events routes', () => {
     expect(pastList.body.events.map((e: { name: string }) => e.name)).toEqual(['Past']);
   });
 
+  it('filters by status for coordinators', async () => {
+    await createEvent({ name: 'Draft one' });
+    const live = await createEvent({ name: 'Live one' });
+    await coordinator.post(`/api/events/${live.id}/publish`).expect(200);
+    const drafts = await coordinator.get('/api/events?when=all&status=draft');
+    expect(drafts.body.events.map((e: { name: string }) => e.name)).toEqual(['Draft one']);
+    const asVolunteer = await volunteer.get('/api/events?when=all&status=draft');
+    expect(asVolunteer.body.events.map((e: { name: string }) => e.name)).toEqual(['Live one']);
+  });
+
   it('searches events by name or location', async () => {
     await createEvent({ name: 'Harvest Festival', location: 'Victoria Park' });
     await createEvent({ name: 'Food bank', location: 'Riverside Hall' });

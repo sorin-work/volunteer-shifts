@@ -1,4 +1,5 @@
 import { Router, type Request } from 'express';
+import type { EventStatus } from '../../db/types.js';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import { conflict, notFound } from '../../lib/errors.js';
@@ -60,6 +61,8 @@ export function eventRoutes(ctx: AppContext): Router {
       .groupBy('events.id');
     if (currentUser(req).role !== 'coordinator') {
       query = query.where('events.status', '=', 'published');
+    } else if (['draft', 'published', 'cancelled'].includes(String(req.query.status))) {
+      query = query.where('events.status', '=', req.query.status as EventStatus);
     }
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     if (search) {
