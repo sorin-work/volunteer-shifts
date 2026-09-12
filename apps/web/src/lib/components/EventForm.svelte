@@ -18,7 +18,17 @@
     onsubmit: (values: EventFormValues) => Promise<void>;
   } = $props();
 
+  const ZONE_KEY = 'volunteer-shifts:last-timezone';
   const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  /** Coordinators usually plan everything in one place, so reuse their last zone. */
+  function lastZone(): string {
+    try {
+      return localStorage.getItem(ZONE_KEY) || browserZone;
+    } catch {
+      return browserZone;
+    }
+  }
   const zones: string[] =
     typeof Intl.supportedValuesOf === 'function'
       ? Intl.supportedValuesOf('timeZone')
@@ -29,7 +39,7 @@
     name: initial?.name ?? '',
     description: initial?.description ?? '',
     location: initial?.location ?? '',
-    timezone: initial?.timezone ?? browserZone,
+    timezone: initial?.timezone ?? lastZone(),
   });
   let fields: Record<string, string> = $state({});
   let error = $state('');
@@ -42,6 +52,11 @@
     saving = true;
     try {
       await onsubmit({ ...values });
+      try {
+        localStorage.setItem(ZONE_KEY, values.timezone);
+      } catch {
+        // Storage can be unavailable (private mode); not worth failing over.
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         fields = err.fields;
