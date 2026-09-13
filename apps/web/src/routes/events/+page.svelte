@@ -6,7 +6,9 @@
   import { isCoordinator } from '$lib/session.svelte';
   import type { EventSummary } from '$lib/types';
 
-  const when = $derived(page.url.searchParams.get('when') === 'past' ? 'past' : 'upcoming');
+  const tab = $derived(page.url.searchParams.get('when') ?? 'upcoming');
+  const when = $derived(tab === 'past' ? 'past' : tab === 'drafts' ? 'all' : 'upcoming');
+  const statusFilter = $derived(tab === 'drafts' ? '&status=draft' : '');
   let search = $state('');
   let debounced = $state('');
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -26,7 +28,7 @@
     loading = true;
     error = '';
     api
-      .get<{ events: EventSummary[] }>(`/events?when=${current}${q}`)
+      .get<{ events: EventSummary[] }>(`/events?when=${current}${statusFilter}${q}`)
       .then((res) => (events = res.events))
       .catch((err) => (error = err instanceof ApiError ? err.message : 'Could not load events.'))
       .finally(() => (loading = false));
@@ -42,8 +44,11 @@
 
 <div class="toolbar">
   <nav class="tabs">
-    <a href="/events" aria-current={when === 'upcoming' ? 'page' : undefined}>Upcoming</a>
-    <a href="/events?when=past" aria-current={when === 'past' ? 'page' : undefined}>Past</a>
+    <a href="/events" aria-current={tab === 'upcoming' ? 'page' : undefined}>Upcoming</a>
+    <a href="/events?when=past" aria-current={tab === 'past' ? 'page' : undefined}>Past</a>
+    {#if isCoordinator()}
+      <a href="/events?when=drafts" aria-current={tab === 'drafts' ? 'page' : undefined}>Drafts</a>
+    {/if}
   </nav>
   <input
     type="search"
