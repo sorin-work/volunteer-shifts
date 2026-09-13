@@ -9,6 +9,7 @@
   const tab = $derived(page.url.searchParams.get('when') ?? 'upcoming');
   const when = $derived(tab === 'past' ? 'past' : tab === 'drafts' ? 'all' : 'upcoming');
   const statusFilter = $derived(tab === 'drafts' ? '&status=draft' : '');
+  const label = $derived(tab === 'drafts' ? 'draft' : when);
   let search = $state('');
   let debounced = $state('');
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -65,7 +66,9 @@
   <p class="alert">{error}</p>
 {:else if events.length === 0}
   <div class="card empty">
-    <p>{debounced ? `No ${when} events match “${debounced}”.` : `No ${when} events right now.`}</p>
+    <p>
+      {debounced ? `No ${label} events match “${debounced}”.` : `No ${label} events right now.`}
+    </p>
     {#if when === 'upcoming'}<p class="muted">
         New events will show up here once they're published.
       </p>{/if}
