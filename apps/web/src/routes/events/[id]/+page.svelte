@@ -138,7 +138,15 @@
               {#if shift.notes}<p class="muted notes">{shift.notes}</p>{/if}
             </div>
             <div class="spots">
-              <span>{spotsLabel(shift)}</span>
+              <span class="fill">
+                <span>{spotsLabel(shift)}</span>
+                <meter
+                  min="0"
+                  max={shift.capacity}
+                  value={shift.confirmedCount}
+                  aria-label="Spots filled"
+                ></meter>
+              </span>
               {#if shift.mySignup}<StatusBadge status={shift.mySignup.status} />{/if}
               {#if event.status === 'published' && !isPast(shift)}
                 {#if shift.mySignup}
@@ -228,6 +236,17 @@
   .shift-error {
     flex-basis: 100%;
     margin: 0;
+  }
+
+  .fill {
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.9rem;
+  }
+
+  .fill meter {
+    width: 100%;
+    height: 0.4rem;
   }
 
   .ineligible {
