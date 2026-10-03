@@ -291,6 +291,20 @@ export async function seedDemo(db: Database, now = new Date()): Promise<boolean>
         })
         .returning('id')
         .executeTakeFirstOrThrow();
+      // Now and then someone dropped out, some of them at the last minute.
+      if (userId !== demo.id && status === 'confirmed' && rnd() < 0.06) {
+        const hoursBefore = rnd() < 0.5 ? 2 + Math.floor(rnd() * 20) : 30 + Math.floor(rnd() * 100);
+        await trx
+          .insertInto('signups')
+          .values({
+            shift_id: shiftId,
+            user_id: others[Math.floor(rnd() * others.length)]!.id,
+            status: 'cancelled',
+            created_at: info.signedUpAt,
+            cancelled_at: new Date(info.startsAt.getTime() - hoursBefore * 3_600_000),
+          })
+          .execute();
+      }
       if (attended) {
         await trx
           .insertInto('hour_entries')

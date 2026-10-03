@@ -44,6 +44,15 @@ describe('demo seed', () => {
     expect(hours.length).toBeGreaterThan(20);
   });
 
+  it('includes some cancellations', async () => {
+    const cancelled = await db
+      .selectFrom('signups')
+      .select('id')
+      .where('status', '=', 'cancelled')
+      .execute();
+    expect(cancelled.length).toBeGreaterThan(0);
+  });
+
   it('never overfills a shift', async () => {
     const rows = await db
       .selectFrom('signups')
