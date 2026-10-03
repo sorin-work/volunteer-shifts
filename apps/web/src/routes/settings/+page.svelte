@@ -94,6 +94,17 @@
       <input id="birthDate" type="date" bind:value={profile.birthDate} />
       {#if profileFields.birthDate}<p class="field-error">{profileFields.birthDate}</p>{/if}
     </div>
+    <div class="field">
+      <span class="label">Confirmed skills</span>
+      {#if session.user?.skills?.length}
+        <p>
+          {#each session.user.skills as skill (skill.id)}<span class="badge">{skill.name}</span>
+          {/each}
+        </p>
+      {:else}
+        <p class="muted">None yet. Show a coordinator your certificates and they will add them.</p>
+      {/if}
+    </div>
     {#if profileMessage}<p class="muted" role="status">{profileMessage}</p>{/if}
     <p><button type="submit">Save profile</button></p>
   </form>
@@ -147,6 +158,16 @@
 </div>
 
 <style>
+  .label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .badge {
+    margin-right: 0.35rem;
+  }
+
   .danger-zone {
     border-color: var(--danger);
   }
