@@ -3,9 +3,6 @@ import type { Attendance } from '../../db/types.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { creditShiftHours, removeShiftHours } from '../hours/credit.js';
 
-/** Volunteers can be checked in this long before their shift starts. */
-export const EARLY_CHECK_IN_MINUTES = 60;
-
 /**
  * Records attendance and keeps the credited hours in step. The signup row is
  * locked so a double-tapped "Check in" can't credit the shift twice.
@@ -41,9 +38,12 @@ export async function markAttendance(
     const now = ctx.now();
     if (
       attendance === 'present' &&
-      now.getTime() < signup.starts_at.getTime() - EARLY_CHECK_IN_MINUTES * 60_000
+      now.getTime() < signup.starts_at.getTime() - ctx.config.CHECK_IN_OPENS_MINUTES * 60_000
     ) {
-      throw conflict('too_early', 'Check-in opens an hour before the shift starts.');
+      throw conflict(
+        'too_early',
+        `Check-in opens ${ctx.config.CHECK_IN_OPENS_MINUTES} minutes before the shift starts.`,
+      );
     }
     if (attendance === 'no_show' && now < signup.starts_at) {
       throw conflict('shift_not_started', "You can't mark a no-show before the shift starts.");

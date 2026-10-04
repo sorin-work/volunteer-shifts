@@ -23,6 +23,12 @@ const schema = z.object({
   REMINDER_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(10),
   ORG_NAME: z.string().default('Riverside Community Volunteers'),
   DIGEST_HOUR_UTC: z.coerce.number().int().min(0).max(23).default(7),
+  CHECK_IN_OPENS_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60)
+    .default(60),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

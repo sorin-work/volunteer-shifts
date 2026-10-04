@@ -82,6 +82,7 @@ The API reads these environment variables (see `.env.example`):
 | `REMINDER_LEAD_HOURS`       | `24`                                                             | Remind volunteers this long before a shift            |
 | `REMINDER_INTERVAL_MINUTES` | `10`                                                             | How often the reminder job runs (`0` turns it off)    |
 | `DIGEST_HOUR_UTC`           | `7`                                                              | Hour (UTC) after which the coordinator digest is sent |
+| `CHECK_IN_OPENS_MINUTES`    | `60`                                                             | How early before a shift volunteers can be checked in |
 | `SEED_DEMO`                 | `false` (`true` in compose)                                      | Seed demo data into an empty database on start        |
 | `LOG_LEVEL`                 | `info`                                                           | pino log level                                        |
 
