@@ -35,7 +35,7 @@ services:
       db:
         condition: service_healthy
       mailpit:
-        condition: service_started
+        condition: service_healthy
 
   # Catches every email the app sends; browse them at http://localhost:8025.
   mailpit:
@@ -43,6 +43,11 @@ services:
     restart: unless-stopped
     ports:
       - '${MAILPIT_PORT:-8025}:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   web:
     build:
