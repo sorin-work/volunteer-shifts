@@ -1,4 +1,5 @@
 <script lang="ts">
+  const today = new Date().toISOString().slice(0, 10);
   import { goto } from '$app/navigation';
   import { api, ApiError } from '$lib/api';
   import { session } from '$lib/session.svelte';
@@ -91,7 +92,7 @@
     </div>
     <div class="field">
       <label for="birthDate">Date of birth</label>
-      <input id="birthDate" type="date" bind:value={profile.birthDate} />
+      <input id="birthDate" type="date" max={today} bind:value={profile.birthDate} />
       {#if profileFields.birthDate}<p class="field-error">{profileFields.birthDate}</p>{/if}
     </div>
     <div class="field">

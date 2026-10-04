@@ -47,6 +47,11 @@ export function authRoutes(ctx: AppContext): Router {
 
   router.post('/register', async (req, res) => {
     const input = validate(registerSchema, req.body);
+    if (input.birthDate && input.birthDate > ctx.now().toISOString().slice(0, 10)) {
+      throw new HttpError(400, 'validation_error', 'Some fields are invalid.', {
+        fields: { birthDate: 'Date of birth must be in the past.' },
+      });
+    }
     const existing = await ctx.db
       .selectFrom('users')
       .select('id')

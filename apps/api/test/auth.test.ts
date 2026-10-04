@@ -48,6 +48,17 @@ describe('auth routes', () => {
       expect(Object.keys(res.body.error.details.fields).sort()).toEqual(['email', 'password']);
     });
 
+    it('rejects a birth date in the future', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        name: 'X',
+        email: 'x@example.org',
+        password: 'long-enough',
+        birthDate: '2031-01-01',
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error.details.fields.birthDate).toBeDefined();
+    });
+
     it('rejects a duplicate email', async () => {
       await createUser(db, { email: 'taken@example.org' });
       const res = await request(app)
