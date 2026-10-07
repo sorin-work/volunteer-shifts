@@ -230,6 +230,23 @@ describe('events routes', () => {
     });
   });
 
+  it('exports every sign-up of an event as csv in local time', async () => {
+    const event = await createEvent({ name: 'Beach clean' });
+    const role = await createRole(db, event.id, { name: 'Litter pick' });
+    const shift = await createShift(db, {
+      eventId: event.id,
+      roleId: role.id,
+      startsAt: '2026-07-04T09:00:00Z',
+      endsAt: '2026-07-04T11:00:00Z',
+    });
+    await volunteer.post(`/api/shifts/${shift.id}/signups`).expect(201);
+    const res = await coordinator.get(`/api/events/${event.id}/signups.csv`);
+    expect(res.headers['content-disposition']).toContain('signups-beach-clean.csv');
+    expect(res.text.split('\r\n')[1]).toMatch(
+      /^2026-07-04,10:00,12:00,Litter pick,User \d+,vol@example.org,,confirmed,pending$/,
+    );
+  });
+
   it('returns 404 for unknown or malformed ids', async () => {
     expect((await coordinator.get('/api/events/999')).status).toBe(404);
     expect((await coordinator.get('/api/events/abc')).status).toBe(404);

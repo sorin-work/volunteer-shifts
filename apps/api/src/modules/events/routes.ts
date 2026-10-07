@@ -3,6 +3,7 @@ import type { EventStatus } from '../../db/types.js';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import { conflict, notFound } from '../../lib/errors.js';
+import { toCsv } from '../../lib/csv.js';
 import { idParam } from '../../lib/params.js';
 import { addDays } from '../../lib/time.js';
 import { containsPattern } from '../../lib/search.js';
@@ -210,6 +211,56 @@ export function eventRoutes(ctx: AppContext): Router {
         hours: Math.round(Number(hours.total) * 100) / 100,
       },
     });
+  });
+
+  router.get('/:id/signups.csv', requireCoordinator, async (req, res) => {
+    const event = await findVisibleEvent(req);
+    const rows = await ctx.db
+      .selectFrom('signups')
+      .innerJoin('shifts', 'shifts.id', 'signups.shift_id')
+      .innerJoin('roles', 'roles.id', 'shifts.role_id')
+      .innerJoin('users', 'users.id', 'signups.user_id')
+      .selectAll('shifts')
+      .select([
+        'roles.name as role_name',
+        'users.name',
+        'users.email',
+        'users.phone',
+        'signups.status',
+        'signups.attendance',
+      ])
+      .where('shifts.event_id', '=', event.id)
+      .where('signups.status', '<>', 'cancelled')
+      .orderBy('shifts.starts_at')
+      .orderBy('roles.name')
+      .orderBy('signups.status')
+      .orderBy('users.name')
+      .execute();
+    const csv = toCsv(
+      ['Date', 'Start', 'End', 'Role', 'Name', 'Email', 'Phone', 'Status', 'Attendance'],
+      rows.map((r) => {
+        const local = toShiftDto(r, event.timezone);
+        return [
+          local.date,
+          local.startTime,
+          local.endTime,
+          r.role_name,
+          r.name,
+          r.email,
+          r.phone,
+          r.status,
+          r.attendance,
+        ];
+      }),
+    );
+    const slug = event.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    res
+      .type('text/csv; charset=utf-8')
+      .set('Content-Disposition', `attachment; filename="signups-${slug || event.id}.csv"`)
+      .send(csv);
   });
 
   router.patch('/:id', requireCoordinator, async (req, res) => {
