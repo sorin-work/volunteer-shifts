@@ -85,6 +85,18 @@ describe('shift reminders', () => {
     expect(ctx.mailer.to('vol@example.org')).toHaveLength(0);
   });
 
+  it('reminds again when the shift moves to another time', async () => {
+    const shift = await signUpFor('2026-03-03T08:00:00Z', '2026-03-03T11:00:00Z');
+    await sendDueReminders(ctx);
+    await createUser(db, { email: 'coord@example.org', role: 'coordinator' });
+    const coord = await loginAs(buildApp(ctx), 'coord@example.org');
+    await coord.patch(`/api/shifts/${shift.id}`).send({ date: '2026-03-04' }).expect(200);
+    ctx.mailer.clear();
+    ctx.setNow('2026-03-03T09:00:00Z');
+    expect(await sendDueReminders(ctx)).toBe(1);
+    expect(ctx.mailer.to('vol@example.org')[0]?.text).toContain('Wednesday, 4 March 2026');
+  });
+
   it('picks up later shifts as the clock moves', async () => {
     await signUpFor('2026-03-05T08:00:00Z', '2026-03-05T11:00:00Z');
     expect(await sendDueReminders(ctx)).toBe(0);

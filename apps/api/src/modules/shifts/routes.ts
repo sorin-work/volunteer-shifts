@@ -183,6 +183,14 @@ export function shiftRoutes(ctx: AppContext): Router {
     if (updated.capacity > shift.capacity) {
       await notifyPromoted(ctx, await promoteFromWaitlist(ctx, shift.id));
     }
+    if (updated.starts_at.getTime() !== shift.starts_at.getTime()) {
+      // A reminder sent for the old time is no longer right.
+      await ctx.db
+        .updateTable('signups')
+        .set({ reminder_sent_at: null })
+        .where('shift_id', '=', shift.id)
+        .execute();
+    }
     res.json({ shift: toShiftDto(updated, event.timezone) });
   });
 
