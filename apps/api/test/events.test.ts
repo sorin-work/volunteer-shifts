@@ -232,6 +232,7 @@ describe('events routes', () => {
 
   it('exports every sign-up of an event as csv in local time', async () => {
     const event = await createEvent({ name: 'Beach clean' });
+    await coordinator.post(`/api/events/${event.id}/publish`).expect(200);
     const role = await createRole(db, event.id, { name: 'Litter pick' });
     const shift = await createShift(db, {
       eventId: event.id,

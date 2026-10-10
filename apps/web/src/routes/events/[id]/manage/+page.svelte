@@ -87,6 +87,8 @@
       {#if event.status === 'draft'}
         <button onclick={() => setStatus('publish')}>Publish</button>
       {/if}
+      <a class="button secondary" href="/api/events/{event.id}/signups.csv" download>Sign-ups CSV</a
+      >
       <button class="secondary" onclick={duplicate}>Duplicate</button>
       {#if event.status !== 'cancelled'}
         <button class="secondary" onclick={() => setStatus('cancel')}>Cancel event</button>
