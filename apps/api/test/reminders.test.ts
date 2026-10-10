@@ -91,6 +91,9 @@ describe('shift reminders', () => {
     await createUser(db, { email: 'coord@example.org', role: 'coordinator' });
     const coord = await loginAs(buildApp(ctx), 'coord@example.org');
     await coord.patch(`/api/shifts/${shift.id}`).send({ date: '2026-03-04' }).expect(200);
+    expect(ctx.mailer.to('vol@example.org').map((m) => m.subject)).toContain(
+      'New time for your shift: Riverside pantry',
+    );
     ctx.mailer.clear();
     ctx.setNow('2026-03-03T09:00:00Z');
     expect(await sendDueReminders(ctx)).toBe(1);

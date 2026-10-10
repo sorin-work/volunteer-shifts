@@ -191,6 +191,27 @@ export function shiftRoutes(ctx: AppContext): Router {
         .where('shift_id', '=', shift.id)
         .execute();
     }
+    if (
+      event.status === 'published' &&
+      (updated.starts_at.getTime() !== shift.starts_at.getTime() ||
+        updated.ends_at.getTime() !== shift.ends_at.getTime())
+    ) {
+      const details = await getShiftWithEvent(ctx, shift.id);
+      const people = await ctx.db
+        .selectFrom('signups')
+        .innerJoin('users', 'users.id', 'signups.user_id')
+        .select(['users.name', 'users.email'])
+        .where('signups.shift_id', '=', shift.id)
+        .where('signups.status', '=', 'confirmed')
+        .execute();
+      for (const person of people) {
+        await sendSafely(
+          ctx.mailer,
+          ctx.logger,
+          templates.shiftMoved(person.email, shiftMailInfo(ctx, details, person)),
+        );
+      }
+    }
     res.json({ shift: toShiftDto(updated, event.timezone) });
   });
 

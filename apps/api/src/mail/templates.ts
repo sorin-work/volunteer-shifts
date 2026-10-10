@@ -105,6 +105,15 @@ export const templates = {
       'Shift details:',
     ),
 
+  shiftMoved: (to: string, info: ShiftMailInfo) =>
+    render(
+      to,
+      `New time for your shift: ${info.eventName}`,
+      info,
+      "The time of your shift has changed. Here are the new details. If you can't make it any more, please cancel.",
+      'Shift details:',
+    ),
+
   shiftRemoved: (to: string, info: ShiftMailInfo) =>
     render(
       to,
