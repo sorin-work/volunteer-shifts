@@ -27,11 +27,20 @@ const server = app.listen(config.PORT, () => {
   logger.info(`api listening on http://localhost:${config.PORT}`);
 });
 
-async function shutdown() {
+let stopping = false;
+async function shutdown(signal: string) {
+  if (stopping) return;
+  stopping = true;
+  logger.info({ signal }, 'shutting down');
   stopReminders();
-  server.close();
+  // Stop accepting connections and let in-flight requests finish, but don't
+  // hang forever on keep-alive sockets.
+  const force = setTimeout(() => server.closeAllConnections(), 10_000);
+  force.unref();
+  server.closeIdleConnections();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
   await db.destroy();
   process.exit(0);
 }
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
