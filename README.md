@@ -58,8 +58,7 @@ npm install
 docker compose up -d db mailpit
 export DATABASE_URL=postgres://volunteer:volunteer@localhost:5432/volunteer_shifts
 export SMTP_URL=smtp://localhost:1025 SEED_DEMO=true
-npm run dev -w apps/api          # http://localhost:4000
-npm run dev -w apps/web          # http://localhost:5173 (proxies /api)
+npm run dev                      # api on :4000 and web on :5173 (proxies /api)
 ```
 
 Migrations run when the API starts; `npm run migrate -w apps/api` and
