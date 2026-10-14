@@ -139,6 +139,28 @@ describe('auth routes', () => {
       expect(res.status).toBe(401);
     });
 
+    it('ignores forged or expired session cookies', async () => {
+      const forged = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', 'vs_session=not-a-real-token');
+      expect(forged.status).toBe(401);
+
+      await createUser(db, { email: 'sam@example.org' });
+      const agent = await loginAs(app, 'sam@example.org');
+      await db
+        .updateTable('sessions')
+        .set({ expires_at: new Date('2020-01-01T00:00:00Z') })
+        .execute();
+      expect((await agent.get('/api/auth/me')).status).toBe(401);
+    });
+
+    it('ends sessions when the user is deleted', async () => {
+      const user = await createUser(db, { email: 'gone@example.org' });
+      const agent = await loginAs(app, 'gone@example.org');
+      await db.deleteFrom('users').where('id', '=', user.id).execute();
+      expect((await agent.get('/api/auth/me')).status).toBe(401);
+    });
+
     it('logout ends the session', async () => {
       await createUser(db, { email: 'sam@example.org' });
       const agent = await loginAs(app, 'sam@example.org');
