@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { api, ApiError } from '$lib/api';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import { formatDateTime, plural } from '$lib/format';
+  import { formatDateRange, plural } from '$lib/format';
   import { isCoordinator } from '$lib/session.svelte';
   import type { EventSummary } from '$lib/types';
 
@@ -81,7 +81,11 @@
         {#if event.status !== 'published'}<StatusBadge status={event.status} />{/if}
         <p class="muted">
           {#if event.firstShiftAt}
-            {formatDateTime(event.firstShiftAt, event.timezone)}
+            {formatDateRange(
+              event.firstShiftAt,
+              event.lastShiftEndsAt ?? event.firstShiftAt,
+              event.timezone,
+            )}
             · {plural(event.shiftCount, 'shift')}
           {:else}
             No shifts yet

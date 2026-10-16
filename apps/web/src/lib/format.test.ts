@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatDate,
+  formatDateRange,
   formatDateTime,
   formatHours,
   formatTimeRange,
@@ -84,5 +85,19 @@ describe('todayIn', () => {
     const now = new Date('2026-09-06T03:00:00Z');
     expect(todayIn('Europe/London', now)).toBe('2026-09-06');
     expect(todayIn('America/Chicago', now)).toBe('2026-09-05');
+  });
+});
+
+describe('formatDateRange', () => {
+  it('shows one day for a single-day event', () => {
+    expect(formatDateRange('2026-06-06T09:00:00Z', '2026-06-06T15:00:00Z', 'Europe/London')).toBe(
+      'Sat 6 Jun',
+    );
+  });
+
+  it('spans several days', () => {
+    expect(formatDateRange('2026-06-05T09:00:00Z', '2026-06-07T17:00:00Z', 'Europe/London')).toBe(
+      'Fri 5 Jun – Sun 7 Jun',
+    );
   });
 });

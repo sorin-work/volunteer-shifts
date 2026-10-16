@@ -72,3 +72,19 @@ export function plural(count: number, one: string, many = `${one}s`): string {
 export function todayIn(timeZone: string, now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
 }
+
+/** "Sat, 6 Jun" or "Fri, 5 Jun – Sun, 7 Jun" for an event's first and last shift. */
+export function formatDateRange(firstIso: string, lastIso: string, timeZone: string): string {
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone,
+  });
+  const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone });
+  // The last shift may end just after midnight; that still counts as the same day.
+  const last = new Date(new Date(lastIso).getTime() - 60_000);
+  const from = fmt.format(new Date(firstIso));
+  if (dayKey.format(new Date(firstIso)) === dayKey.format(last)) return from;
+  return `${from} – ${fmt.format(last)}`;
+}
