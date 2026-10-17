@@ -27,6 +27,24 @@ describe('describeSignupError', () => {
     expect(describeSignupError(err)).toMatch(/date of birth/);
   });
 
+  it('falls back to the api message when a clash has no details', () => {
+    const err = new ApiError(409, 'schedule_conflict', 'You already have a shift at this time.');
+    expect(describeSignupError(err)).toBe('You already have a shift at this time.');
+  });
+
+  it('asks people to sign in again when the session expired', () => {
+    expect(describeSignupError(new ApiError(401, 'unauthorized', 'x'))).toMatch(/sign in again/);
+  });
+
+  it.each(['too_young', 'already_signed_up', 'shift_started', 'event_cancelled'])(
+    'shows the api message for %s',
+    (code) => {
+      expect(describeSignupError(new ApiError(409, code, `message for ${code}`))).toBe(
+        `message for ${code}`,
+      );
+    },
+  );
+
   it('has a fallback for unexpected errors', () => {
     expect(describeSignupError(new Error('boom'))).toBe('Something went wrong, please try again.');
   });
