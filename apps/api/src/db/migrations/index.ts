@@ -11,6 +11,7 @@ import * as m0009 from './0009_signup_indexes.js';
 import * as m0010 from './0010_email_case.js';
 import * as m0011 from './0011_hour_entries_signup_unique.js';
 import * as m0012 from './0012_job_runs.js';
+import * as m0013 from './0013_shift_start_index.js';
 
 // Migrations are registered here explicitly (instead of read from disk) so the
 // same list works from tsx, the compiled build and the test suite.
@@ -27,4 +28,5 @@ export const migrations: Record<string, Migration> = {
   '0010_email_case': m0010,
   '0011_hour_entries_signup_unique': m0011,
   '0012_job_runs': m0012,
+  '0013_shift_start_index': m0013,
 };
