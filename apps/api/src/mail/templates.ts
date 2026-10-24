@@ -5,6 +5,7 @@ export interface ShiftMailInfo {
   volunteerName: string;
   eventName: string;
   roleName: string;
+  roleDescription?: string;
   startsAt: Date;
   endsAt: Date;
   timezone: string;
@@ -45,6 +46,7 @@ function render(
     intro,
     '',
     `${info.eventName}: ${info.roleName}`,
+    ...(info.roleDescription ? [info.roleDescription] : []),
     when,
     ...(info.location ? [info.location] : []),
     ...(info.notes ? ['', `Notes: ${info.notes}`] : []),
@@ -59,6 +61,7 @@ function render(
 <p>${e(intro)}</p>
 <table style="border-left: 3px solid #1f7a5a; padding-left: 12px">
 <tr><td><strong>${e(info.eventName)}: ${e(info.roleName)}</strong></td></tr>
+${info.roleDescription ? `<tr><td>${e(info.roleDescription)}</td></tr>` : ''}
 <tr><td>${e(when)}</td></tr>
 ${info.location ? `<tr><td>${e(info.location)}</td></tr>` : ''}
 ${info.notes ? `<tr><td><em>${e(info.notes)}</em></td></tr>` : ''}

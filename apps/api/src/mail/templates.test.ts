@@ -40,6 +40,15 @@ describe('templates', () => {
     expect(mail.html).not.toContain('<script>');
   });
 
+  it('includes what the role involves when there is a description', () => {
+    const mail = templates.signupConfirmed('sam@example.org', {
+      ...info,
+      roleDescription: 'Answer questions and look after lost property.',
+    });
+    expect(mail.text).toContain('Answer questions and look after lost property.');
+    expect(mail.html).toContain('look after lost property');
+  });
+
   it('mentions the waitlist position', () => {
     expect(templates.signupWaitlisted('sam@example.org', info, 3).text).toContain('number 3');
   });

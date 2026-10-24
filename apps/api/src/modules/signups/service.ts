@@ -18,6 +18,7 @@ export async function getShiftWithEvent(ctx: AppContext, shiftId: number) {
       'events.timezone as event_timezone',
       'events.location as event_location',
       'roles.name as role_name',
+      'roles.description as role_description',
       'roles.min_age as role_min_age',
     ])
     .where('shifts.id', '=', shiftId)

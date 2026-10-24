@@ -10,6 +10,7 @@ interface ShiftRow {
   event_timezone: string;
   event_location: string;
   role_name: string;
+  role_description?: string;
 }
 
 export function shiftMailInfo(
@@ -21,6 +22,7 @@ export function shiftMailInfo(
     volunteerName: volunteer.name,
     eventName: shift.event_name,
     roleName: shift.role_name,
+    roleDescription: shift.role_description ?? '',
     startsAt: shift.starts_at,
     endsAt: shift.ends_at,
     timezone: shift.event_timezone,
