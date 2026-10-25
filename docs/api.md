@@ -4,6 +4,13 @@ All endpoints live under `/api` and speak JSON. Authentication uses an
 HTTP-only session cookie (`vs_session`) set by `POST /api/auth/login` or
 `POST /api/auth/register`.
 
+## General
+
+- `GET /api/health` returns `{ "status": "ok" }`, or 503 when the database is unreachable.
+- Every response carries an `X-Request-Id` header (taken from the request when it looks
+  valid); 500 errors include it as `error.requestId` to match the logs.
+- Sign-in is limited to 10 attempts per email and IP every 15 minutes.
+
 ## Errors
 
 Every error has the same shape:
@@ -30,14 +37,15 @@ Every error has the same shape:
 
 ## Auth
 
-| Method | Path                   | Who       | Notes                                                               |
-| ------ | ---------------------- | --------- | ------------------------------------------------------------------- |
-| POST   | `/auth/register`       | anyone    | `{ name, email, password, phone?, birthDate? }`, always a volunteer |
-| POST   | `/auth/login`          | anyone    | `{ email, password }`                                               |
-| POST   | `/auth/logout`         | any       | 204                                                                 |
-| GET    | `/auth/me`             | signed in | current user with confirmed skills                                  |
-| PATCH  | `/me/profile`          | signed in | `{ name?, phone?, birthDate? }`                                     |
-| POST   | `/me/profile/password` | signed in | `{ currentPassword, newPassword }`, signs out other devices         |
+| Method | Path                   | Who       | Notes                                                                           |
+| ------ | ---------------------- | --------- | ------------------------------------------------------------------------------- |
+| POST   | `/auth/register`       | anyone    | `{ name, email, password, phone?, birthDate? }`, always a volunteer             |
+| POST   | `/auth/login`          | anyone    | `{ email, password }`                                                           |
+| POST   | `/auth/logout`         | any       | 204                                                                             |
+| GET    | `/auth/me`             | signed in | current user with confirmed skills                                              |
+| PATCH  | `/me/profile`          | signed in | `{ name?, phone?, birthDate? }`                                                 |
+| POST   | `/me/profile/password` | signed in | `{ currentPassword, newPassword }`, signs out other devices                     |
+| DELETE | `/me/profile`          | signed in | `{ password }`, deletes the account and its history; the last coordinator can't |
 
 ## Events, roles and shifts
 
@@ -49,6 +57,9 @@ Every error has the same shape:
 | PATCH  | `/events/:id`                      | coordinator | partial update                                                                                                                |
 | POST   | `/events/:id/publish`              | coordinator |                                                                                                                               |
 | POST   | `/events/:id/cancel`               | coordinator | emails everyone with an upcoming shift                                                                                        |
+| POST   | `/events/:id/duplicate`            | coordinator | `{ name?, shiftDays }` copies roles and shifts into a new draft                                                               |
+| GET    | `/events/:id/summary`              | coordinator | sign-ups, check-ins, no-shows, turnout and hours                                                                              |
+| GET    | `/events/:id/signups.csv`          | coordinator | every sign-up with local shift times                                                                                          |
 | POST   | `/events/:id/roles`                | coordinator | `{ name, description?, minAge?, skillIds? }`                                                                                  |
 | PATCH  | `/roles/:id`                       | coordinator | partial update                                                                                                                |
 | DELETE | `/roles/:id`                       | coordinator | 409 while the role has shifts                                                                                                 |
@@ -69,6 +80,7 @@ local wall-clock values in the event's time zone (`date`, `startTime`,
 | POST   | `/shifts/:id/signups`             | signed in            | confirmed, or waitlisted when the shift is full; coordinators may pass `{ userId }` |
 | GET    | `/me/signups?when=upcoming\|past` | signed in            | with shift, event, role and waitlist position                                       |
 | DELETE | `/signups/:id`                    | owner or coordinator | cancels; the next person on the waitlist moves up                                   |
+| GET    | `/signups/:id/calendar.ics`       | owner                | the shift as an iCalendar file                                                      |
 
 A sign-up is refused when it overlaps another of your shifts, when the role's
 minimum age or required skills aren't met, or when the shift has started.
@@ -83,22 +95,26 @@ minimum age or required skills aren't met, or when the shift has started.
 
 ## Volunteers, skills and hours
 
-| Method | Path                                  | Who               | Notes                                           |
-| ------ | ------------------------------------- | ----------------- | ----------------------------------------------- |
-| GET    | `/volunteers?search=&page=&pageSize=` | coordinator       | paginated directory                             |
-| GET    | `/volunteers/:id`                     | self, coordinator | profile with attendance and hours stats         |
-| PUT    | `/volunteers/:id/skills`              | coordinator       | `{ skillIds }`                                  |
-| GET    | `/volunteers/:id/hours?year=`         | self, coordinator | entries and yearly totals                       |
-| POST   | `/volunteers/:id/hours`               | coordinator       | manual entry `{ workedOn, hours, description }` |
-| DELETE | `/hours/:id`                          | coordinator       | manual entries only                             |
-| GET    | `/volunteers/:id/certificates/:year`  | self, coordinator | PDF certificate                                 |
-| GET    | `/skills`                             | signed in         |                                                 |
-| POST   | `/skills`                             | coordinator       | `{ name }`                                      |
-| DELETE | `/skills/:id`                         | coordinator       |                                                 |
+| Method | Path                                  | Who               | Notes                                                               |
+| ------ | ------------------------------------- | ----------------- | ------------------------------------------------------------------- |
+| GET    | `/volunteers?search=&page=&pageSize=` | coordinator       | paginated directory                                                 |
+| GET    | `/volunteers/:id`                     | self, coordinator | profile with attendance and hours stats                             |
+| PUT    | `/volunteers/:id/skills`              | coordinator       | `{ skillIds }`                                                      |
+| PUT    | `/volunteers/:id/role`                | coordinator       | `{ role: "coordinator" \| "volunteer" }`; you can't demote yourself |
+| GET    | `/reports/hours?year=`                | coordinator       | hours and shifts per volunteer for a year                           |
+| GET    | `/reports/hours.csv?year=`            | coordinator       | the same as CSV                                                     |
+| GET    | `/volunteers/:id/hours?year=`         | self, coordinator | entries and yearly totals                                           |
+| POST   | `/volunteers/:id/hours`               | coordinator       | manual entry `{ workedOn, hours, description }`                     |
+| DELETE | `/hours/:id`                          | coordinator       | manual entries only                                                 |
+| GET    | `/volunteers/:id/certificates/:year`  | self, coordinator | PDF certificate                                                     |
+| GET    | `/skills`                             | signed in         |                                                                     |
+| POST   | `/skills`                             | coordinator       | `{ name }`                                                          |
+| DELETE | `/skills/:id`                         | coordinator       |                                                                     |
 
 ## Emails
 
 Sent through `SMTP_URL` (Mailpit in docker compose): sign-up confirmation,
 waitlist notice, promotion from the waitlist, reminder before the shift
-(`REMINDER_LEAD_HOURS`, checked every `REMINDER_INTERVAL_MINUTES`) and event
-cancellation.
+(`REMINDER_LEAD_HOURS`, checked every `REMINDER_INTERVAL_MINUTES`), new shift
+time, removed shift, event cancellation, and a daily digest of understaffed
+shifts for coordinators (after `DIGEST_HOUR_UTC`).
