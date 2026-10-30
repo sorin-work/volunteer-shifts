@@ -115,9 +115,15 @@ apps/
   web/                 SvelteKit (Svelte 5) single-page app, served by nginx
     src/lib/           api client, session, formatting, components
     src/routes/        pages
-docs/                  API reference and architecture notes
+docs/                  API reference, architecture notes, troubleshooting
 docker-compose.yml     db, api, web and mailpit
 ```
+
+## Documentation
+
+- [API reference](docs/api.md)
+- [Architecture notes](docs/architecture.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ## License
 
