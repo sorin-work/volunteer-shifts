@@ -129,12 +129,13 @@
           {@const role = roleById.get(shift.roleId)}
           <li class="card shift">
             <div>
-              <strong>{role?.name}</strong>
+              <strong title={role?.description || undefined}>{role?.name}</strong>
               <span class="muted">{formatTimeRange(shift)}</span>
               {#if role?.minAge}<span class="badge muted">{role.minAge}+</span>{/if}
               {#each role?.requiredSkills ?? [] as skill (skill.id)}
                 <span class="badge muted">{skill.name}</span>
               {/each}
+              {#if role?.description}<p class="muted notes">{role.description}</p>{/if}
               {#if shift.notes}<p class="muted notes">{shift.notes}</p>{/if}
             </div>
             <div class="spots">
