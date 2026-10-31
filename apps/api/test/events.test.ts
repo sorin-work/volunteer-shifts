@@ -198,6 +198,24 @@ describe('events routes', () => {
     ]);
   });
 
+  it('copies required skills when duplicating, and nobody signed up', async () => {
+    const event = await createEvent({ name: 'Warehouse day' });
+    const role = await createRole(db, event.id, { name: 'Forklift' });
+    const skill = await db
+      .insertInto('skills')
+      .values({ name: 'Forklift licence' })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    await db.insertInto('role_skills').values({ role_id: role.id, skill_id: skill.id }).execute();
+    const res = await coordinator.post(`/api/events/${event.id}/duplicate`).send({});
+    expect(res.body.event.name).toBe('Warehouse day (copy)');
+    const details = await coordinator.get(`/api/events/${res.body.event.id}`);
+    expect(details.body.roles[0].requiredSkills).toEqual([
+      { id: skill.id, name: 'Forklift licence' },
+    ]);
+    expect((await volunteer.post(`/api/events/${event.id}/duplicate`).send({})).status).toBe(403);
+  });
+
   it('summarises turnout for an event', async () => {
     const event = await createEvent();
     const role = await createRole(db, event.id);
