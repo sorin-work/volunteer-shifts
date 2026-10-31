@@ -21,6 +21,7 @@
 
   let events: EventSummary[] = $state([]);
   let loading = $state(true);
+  let loaded = $state(false);
   let error = $state('');
 
   $effect(() => {
@@ -32,7 +33,10 @@
       .get<{ events: EventSummary[] }>(`/events?when=${current}${statusFilter}${q}`)
       .then((res) => (events = res.events))
       .catch((err) => (error = err instanceof ApiError ? err.message : 'Could not load events.'))
-      .finally(() => (loading = false));
+      .finally(() => {
+        loading = false;
+        loaded = true;
+      });
   });
 </script>
 
@@ -60,7 +64,7 @@
   />
 </div>
 
-{#if loading}
+{#if loading && !loaded}
   <p class="muted">Loading events…</p>
 {:else if error}
   <p class="alert">{error}</p>
@@ -74,7 +78,7 @@
       </p>{/if}
   </div>
 {:else}
-  <ul class="list">
+  <ul class="list" class:refreshing={loading} aria-busy={loading}>
     {#each events as event (event.id)}
       <li class="card">
         <a class="title" href="/events/{event.id}">{event.name}</a>
@@ -139,6 +143,10 @@
     padding: 0;
     display: grid;
     gap: 0.75rem;
+  }
+
+  .refreshing {
+    opacity: 0.6;
   }
 
   .title {
