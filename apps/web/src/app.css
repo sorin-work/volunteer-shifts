@@ -255,3 +255,22 @@ button.danger {
     text-decoration: none;
   }
 }
+
+@media (max-width: 560px) {
+  .container {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .card {
+    padding: 0.9rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  table.card th,
+  table.card td {
+    padding: 0.45rem 0.5rem;
+  }
+}
