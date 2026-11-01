@@ -88,3 +88,39 @@ describe('addDays', () => {
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
   });
 });
+
+describe('round trips across zones', () => {
+  const zones = [
+    'UTC',
+    'Europe/London',
+    'Europe/Bucharest',
+    'America/Los_Angeles',
+    'Asia/Kolkata',
+    'Australia/Adelaide',
+    'Pacific/Auckland',
+  ];
+  const dates = ['2026-01-15', '2026-03-29', '2026-07-01', '2026-10-25', '2026-12-31'];
+
+  it.each(zones)('reads back the same local date and time in %s', (tz) => {
+    for (const date of dates) {
+      for (const time of ['00:30', '09:00', '13:45', '23:59']) {
+        const instant = zonedTimeToUtc(date, time, tz);
+        const back = new Intl.DateTimeFormat('en-GB', {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+        }).format(instant);
+        // Skipped (spring-forward) times move forward, everything else is exact.
+        if (back !== time) expect(back > time).toBe(true);
+        else expect(localDate(instant, tz)).toBe(date);
+      }
+    }
+  });
+
+  it('handles half-hour offsets', () => {
+    expect(zonedTimeToUtc('2026-06-01', '09:00', 'Asia/Kolkata').toISOString()).toBe(
+      '2026-06-01T03:30:00.000Z',
+    );
+  });
+});
