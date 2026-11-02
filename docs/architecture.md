@@ -70,3 +70,14 @@ tables before each test.
 
 The web tests run in jsdom with Testing Library for components and plain unit
 tests for the helpers in `src/lib`.
+
+## Adding a migration
+
+1. Add `apps/api/src/db/migrations/00NN_<name>.ts` with `up` (and `down`).
+   Migrations take `Kysely<any>` because they run against the schema as it was
+   at that point, not the current types.
+2. Register it in `apps/api/src/db/migrations/index.ts`. The list is explicit
+   so the same migrations run from tsx, the compiled build and the tests.
+3. Update the table interfaces in `apps/api/src/db/types.ts`.
+4. The API applies pending migrations on start; tests apply them to every
+   fresh PGlite database.
