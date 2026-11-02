@@ -18,7 +18,9 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "migrate": "npm run migrate -w apps/api",
+    "seed": "npm run seed -w apps/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

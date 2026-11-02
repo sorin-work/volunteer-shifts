@@ -61,8 +61,8 @@ export SMTP_URL=smtp://localhost:1025 SEED_DEMO=true
 npm run dev                      # api on :4000 and web on :5173 (proxies /api)
 ```
 
-Migrations run when the API starts; `npm run migrate -w apps/api` and
-`npm run seed -w apps/api` run them by hand.
+Migrations run when the API starts; `npm run migrate` and `npm run seed`
+run them (and the demo data) by hand.
 
 ## Configuration
 
