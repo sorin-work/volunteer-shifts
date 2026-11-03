@@ -257,6 +257,12 @@ button.danger {
 }
 
 @media (max-width: 560px) {
+  /* Wide tables scroll inside their card instead of stretching the page. */
+  table.card {
+    display: block;
+    overflow-x: auto;
+  }
+
   .container {
     padding: 1rem 0.75rem 2rem;
   }
