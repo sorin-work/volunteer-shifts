@@ -721,3 +721,87 @@ errors, email failures, reminder runs and how long they take.
 - `/api/ready` that also checks that migrations are at the latest version
   and the mailer can connect, separate from liveness.
 - Tests: disabled by default, counters move after a request.
+
+## Maybe
+
+### 34. Languages and date formats
+
+Everything is in English, and dates are formatted with a fixed `en-GB`
+locale, both in the web app (`apps/web/src/lib/format.ts`) and on the
+certificate (`issuedOn` in `modules/certificates/routes.ts`). Food banks and
+festivals often have volunteers who would rather read another language.
+
+- Web: a message catalogue per language and a language switch; `Intl`
+  formats from the chosen locale. Svelte 5 needs no library for this, a typed
+  dictionary is enough.
+- Emails: templates in `mail/templates.ts` per language, chosen by a
+  `language` column on `users`.
+- The certificate in the volunteer's language.
+- Why Maybe: every string in the app and every email has to go through it,
+  and each language needs someone to keep it up to date. Date formats alone
+  (a `locale` setting) are an S and could be split out.
+- Tests: a check that every key exists in every catalogue; templates render
+  in each language.
+
+### 35. Faster with many events and volunteers
+
+The demo has a few events and two dozen volunteers. A few places would slow
+down with years of data:
+
+- `GET /api/shifts/understaffed` loads every upcoming shift with its count
+  and filters and sorts in JavaScript.
+- The event page loads all shifts of an event with their sign-ups; a
+  festival with 400 shifts is a big response for a phone.
+- The hours report scans all hour entries of the year, which is fine, and
+  the volunteer profile sums all hours ever, also fine.
+- What would help: the understaffed filter in SQL (`HAVING count < capacity`),
+  shifts on the event page by day, and an index on
+  `signups (shift_id, status)` (check `0009_signup_indexes.ts` first).
+- Why Maybe: I have no reason to think anyone has this much data yet. Measure
+  with a seeded fixture before changing anything, and assert on query counts,
+  not timing.
+
+### 36. Text message reminders through a gateway
+
+Email reminders are easy to miss; volunteers often ask for a text message the
+day before. The app stores a phone number already.
+
+- An optional SMS sender next to the mailer, configured by URL, that speaks to
+  a self-hosted gateway (an Android phone running an SMS gateway app, or
+  `gammu-smsd` with a modem) over HTTP. No account with a commercial provider
+  is required; one could be added behind the same interface.
+- Per user opt-in (item 7), for reminders and last-minute changes only.
+- Why Maybe: phone numbers are free text today and would need checking and a
+  country code; delivery costs money even self-hosted; and a gateway is one
+  more thing to run.
+- Tests: the sender interface with a fake, opt-in respected.
+
+### 37. Several organisations in one installation
+
+Each installation serves one organisation (`ORG_NAME` is an environment
+variable). Several small groups sharing one server, or a volunteer centre that
+serves many charities, would need organisations as data.
+
+- An `organisations` table; events, skills and roles belong to one; users can
+  belong to several with a role in each.
+- Every query that today filters by nothing would filter by organisation.
+- Why Maybe: that is every query in the app, and getting one wrong leaks one
+  organisation's volunteers to another. Separate installations are simpler and
+  safer, and compose makes them cheap. Item 29 is the smaller step that solves
+  most of the "different teams" need.
+
+### 38. Offline check-in on a phone
+
+At outdoor events the signal is often poor, and the roster needs a connection
+for every check-in.
+
+- An installable app (the web manifest exists, `static/manifest.webmanifest`)
+  with a service worker that keeps the rosters of today's shifts and queues
+  check-ins while offline, sending them when the connection returns.
+- The server accepts a `checked_in_at` from the queue, within limits (not in
+  the future, not before the check-in window).
+- Why Maybe: two coordinators checking in offline on two phones can disagree,
+  and the merge rule (first wins, last wins, ask) needs care. Item 18's
+  self check-in also needs a connection, on the volunteer's own phone.
+- Tests: the queue and replay as a pure module with specs; server limits on
+  `checked_in_at`.
