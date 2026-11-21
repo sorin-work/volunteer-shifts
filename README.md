@@ -124,6 +124,7 @@ docker-compose.yml     db, api, web and mailpit
 - [API reference](docs/api.md)
 - [Architecture notes](docs/architecture.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Roadmap](ROADMAP.md): ideas for what could come next
 
 ## License
 
