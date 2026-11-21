@@ -755,9 +755,9 @@ down with years of data:
 - The hours report scans all hour entries of the year, which is fine, and
   the volunteer profile sums all hours ever, also fine.
 - What would help: the understaffed filter in SQL (`HAVING count < capacity`)
-  and shifts on the event page by day. The indexes are mostly there already
-  (`signups (shift_id, status)` in `0009_signup_indexes.ts`, `shifts
-  (starts_at)` in `0013_shift_start_index.ts`).
+  and shifts on the event page by day. The indexes are mostly there already:
+  `signups (shift_id, status)` in `0009_signup_indexes.ts` and
+  `shifts (starts_at)` in `0013_shift_start_index.ts`.
 - Why Maybe: I have no reason to think anyone has this much data yet. Measure
   with a seeded fixture before changing anything, and assert on query counts,
   not timing.
